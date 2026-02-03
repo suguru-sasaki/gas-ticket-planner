@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+        margin: 0;
+        padding: 16px;
+        background-color: #fafafa;
+      }
+
+      h2 {
+        margin: 0 0 8px 0;
+        color: #333;
+        font-size: 18px;
+      }
+
+      p.description {
+        color: #666;
+        font-size: 13px;
+        margin: 0 0 16px 0;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: 500;
+        color: #555;
+        font-size: 14px;
+      }
+
+      .required::after {
+        content: ' *';
+        color: #d32f2f;
+      }
+
+      input[type='date'] {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+      }
+
+      input[type='date']:focus {
+        outline: none;
+        border-color: #4285f4;
+      }
+
+      .error {
+        color: #d32f2f;
+        font-size: 12px;
+        margin-top: 4px;
+        display: none;
+      }
+
+      .error.show {
+        display: block;
+      }
+
+      .button-group {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 24px;
+      }
+
+      button {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      button.primary {
+        background-color: #4285f4;
+        color: white;
+      }
+
+      button.primary:hover {
+        background-color: #3367d6;
+      }
+
+      button.primary:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+
+      button.secondary {
+        background-color: #f5f5f5;
+        color: #333;
+      }
+
+      button.secondary:hover {
+        background-color: #e0e0e0;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 20px;
+      }
+
+      .loading.show {
+        display: block;
+      }
+
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #4285f4;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 8px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="form-container">
+      <p class="description">
+        指定した期間に含まれる親チケットを対象にガントチャートを生成します。
+      </p>
+
+      <div class="form-group">
+        <label for="startDate" class="required">開始日</label>
+        <input type="date" id="startDate" />
+        <div class="error" id="startDate-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="endDate" class="required">終了日</label>
+        <input type="date" id="endDate" />
+        <div class="error" id="endDate-error"></div>
+      </div>
+
+      <div class="button-group">
+        <button type="button" class="secondary" onclick="closeDialog()">
+          キャンセル
+        </button>
+        <button
+          type="button"
+          class="primary"
+          id="submitBtn"
+          onclick="submitForm()"
+        >
+          生成
+        </button>
+      </div>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div>生成中...</div>
+    </div>
+
+    <script>
+      // 初期化
+      document.addEventListener('DOMContentLoaded', function () {
+        setDefaultDates();
+      });
+
+      // デフォルト日付を設定（今月の1日〜末日）
+      function setDefaultDates() {
+        const today = new Date();
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+        document.getElementById('startDate').value = formatDate(firstDay);
+        document.getElementById('endDate').value = formatDate(lastDay);
+      }
+
+      // 日付をYYYY-MM-DD形式にフォーマット
+      function formatDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+      }
+
+      // バリデーション
+      function validateForm() {
+        let isValid = true;
+
+        // 開始日
+        const startDate = document.getElementById('startDate').value;
+        if (!startDate) {
+          showError('startDate', '開始日は必須です');
+          isValid = false;
+        } else {
+          hideError('startDate');
+        }
+
+        // 終了日
+        const endDate = document.getElementById('endDate').value;
+        if (!endDate) {
+          showError('endDate', '終了日は必須です');
+          isValid = false;
+        } else if (startDate && new Date(endDate) < new Date(startDate)) {
+          showError('endDate', '終了日は開始日以降にしてください');
+          isValid = false;
+        } else {
+          hideError('endDate');
+        }
+
+        return isValid;
+      }
+
+      // エラー表示
+      function showError(fieldId, message) {
+        const errorEl = document.getElementById(fieldId + '-error');
+        errorEl.textContent = message;
+        errorEl.classList.add('show');
+      }
+
+      // エラー非表示
+      function hideError(fieldId) {
+        const errorEl = document.getElementById(fieldId + '-error');
+        errorEl.classList.remove('show');
+      }
+
+      // ローディング表示切替
+      function setLoading(loading) {
+        document.getElementById('form-container').style.display = loading
+          ? 'none'
+          : 'block';
+        document.getElementById('loading').classList.toggle('show', loading);
+      }
+
+      // フォーム送信
+      function submitForm() {
+        if (!validateForm()) {
+          return;
+        }
+
+        const params = {
+          startDate: document.getElementById('startDate').value,
+          endDate: document.getElementById('endDate').value,
+        };
+
+        setLoading(true);
+
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(onFailure)
+          .generateGantt(params);
+      }
+
+      // 成功時
+      function onSuccess(result) {
+        setLoading(false);
+        if (result.success) {
+          alert(
+            'ガントチャートを生成しました\n\nシート名: ' + result.sheetName
+          );
+          google.script.host.close();
+        } else {
+          alert('エラー: ' + result.error);
+        }
+      }
+
+      // 失敗時
+      function onFailure(error) {
+        setLoading(false);
+        alert('エラーが発生しました: ' + error.message);
+      }
+
+      // ダイアログを閉じる
+      function closeDialog() {
+        google.script.host.close();
+      }
+    </script>
+  </body>
+</html>
