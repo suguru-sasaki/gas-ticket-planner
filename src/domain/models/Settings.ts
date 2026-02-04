@@ -10,8 +10,6 @@ export interface GanttSettings {
   childColorInProgress: string;
   /** 子チケット色（完了） */
   childColorCompleted: string;
-  /** 今日の日付色 */
-  todayColor: string;
   /** 土曜日色（青系） */
   saturdayColor: string;
   /** 日曜日色（赤系） */
@@ -30,7 +28,6 @@ export const DEFAULT_SETTINGS: GanttSettings = {
   childColorNotStarted: '#E0E0E0',
   childColorInProgress: '#FFC107',
   childColorCompleted: '#4CAF50',
-  todayColor: '#FFEB3B',
   saturdayColor: '#BBDEFB',
   sundayColor: '#FFCDD2',
   holidayColor: '#FFCDD2',
@@ -45,7 +42,6 @@ export const SETTING_KEY_MAP: Record<keyof GanttSettings, string> = {
   childColorNotStarted: '子チケット色_未着手',
   childColorInProgress: '子チケット色_進行中',
   childColorCompleted: '子チケット色_完了',
-  todayColor: '今日の日付色',
   saturdayColor: '土曜日色',
   sundayColor: '日曜日色',
   holidayColor: '祝日色',
@@ -60,7 +56,6 @@ export const SETTING_LABEL_TO_KEY: Record<string, keyof GanttSettings> = {
   子チケット色_未着手: 'childColorNotStarted',
   子チケット色_進行中: 'childColorInProgress',
   子チケット色_完了: 'childColorCompleted',
-  今日の日付色: 'todayColor',
   土曜日色: 'saturdayColor',
   日曜日色: 'sundayColor',
   祝日色: 'holidayColor',
@@ -75,7 +70,6 @@ export const SETTING_KEYS = {
   childColorNotStarted: '子チケット色_未着手',
   childColorInProgress: '子チケット色_進行中',
   childColorCompleted: '子チケット色_完了',
-  todayColor: '今日の日付色',
   saturdayColor: '土曜日色',
   sundayColor: '日曜日色',
   holidayColor: '祝日色',

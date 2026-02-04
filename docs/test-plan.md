@@ -526,8 +526,9 @@ describe('GanttService', () => {
       childColorNotStarted: '#E0E0E0',
       childColorInProgress: '#FFC107',
       childColorCompleted: '#4CAF50',
-      todayColor: '#FFEB3B',
-      weekendColor: '#F5F5F5',
+      saturdayColor: '#BBDEFB',
+      sundayColor: '#FFCDD2',
+      holidayColor: '#FFCDD2',
       headerBackgroundColor: '#E3F2FD',
     };
 
@@ -860,8 +861,9 @@ describe('ガント生成結合テスト', () => {
       ['子チケット色_未着手', '#E0E0E0'],
       ['子チケット色_進行中', '#FFC107'],
       ['子チケット色_完了', '#4CAF50'],
-      ['今日の日付色', '#FFEB3B'],
-      ['週末色', '#F5F5F5'],
+      ['土曜日色', '#BBDEFB'],
+      ['日曜日色', '#FFCDD2'],
+      ['祝日色', '#FFCDD2'],
       ['ヘッダ背景色', '#E3F2FD'],
     ]);
 

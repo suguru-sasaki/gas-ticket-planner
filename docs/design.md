@@ -260,7 +260,6 @@ interface GanttSettings {
   childColorNotStarted: string;  // 子チケット色（未着手）
   childColorInProgress: string;  // 子チケット色（進行中）
   childColorCompleted: string;   // 子チケット色（完了）
-  todayColor: string;            // 今日の日付色
   saturdayColor: string;         // 土曜日色（青系）
   sundayColor: string;           // 日曜日色（赤系）
   holidayColor: string;          // 祝日色（赤系）
@@ -272,7 +271,6 @@ const DEFAULT_SETTINGS: GanttSettings = {
   childColorNotStarted: '#E0E0E0',
   childColorInProgress: '#FFC107',
   childColorCompleted: '#4CAF50',
-  todayColor: '#FFEB3B',
   saturdayColor: '#BBDEFB',      // 青系（Material Design Blue 100）
   sundayColor: '#FFCDD2',        // 赤系（Material Design Red 100）
   holidayColor: '#FFCDD2',       // 赤系（日曜日と同じ）
@@ -804,8 +802,9 @@ class SettingsRepository {
       '子チケット色_未着手': 'childColorNotStarted',
       '子チケット色_進行中': 'childColorInProgress',
       '子チケット色_完了': 'childColorCompleted',
-      '今日の日付色': 'todayColor',
-      '週末色': 'weekendColor',
+      '土曜日色': 'saturdayColor',
+      '日曜日色': 'sundayColor',
+      '祝日色': 'holidayColor',
       'ヘッダ背景色': 'headerBackgroundColor',
     };
     return map[key] || null;

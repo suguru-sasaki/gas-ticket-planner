@@ -295,12 +295,9 @@ export class GanttService {
     }
 
     // 日付カラム
-    const today = DateUtils.stripTime(new Date());
-
     for (const date of dateRange) {
       const strippedDate = DateUtils.stripTime(date);
       const isInRange = this.isDateInRange(strippedDate, ticket);
-      const isToday = strippedDate.getTime() === today.getTime();
       const isSunday = DateUtils.isSunday(strippedDate);
       const isSaturday = DateUtils.isSaturday(strippedDate);
       const isHoliday = HolidayService.isHoliday(strippedDate, holidays);
@@ -313,9 +310,6 @@ export class GanttService {
           isParent,
           STATUS_LABELS[ticket.status]
         );
-      } else if (isToday) {
-        // 今日の日付（チケット期間外）
-        bgColor = settings.todayColor;
       } else if (isHoliday) {
         // 祝日（チケット期間外）
         bgColor = settings.holidayColor;
