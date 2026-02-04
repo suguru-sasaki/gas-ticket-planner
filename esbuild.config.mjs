@@ -38,6 +38,13 @@ function showHelp() { return GasTicketPlanner.showHelp(); }
 function getAssigneeList() { return GasTicketPlanner.getAssigneeList(); }
 function createTicket(formData) { return GasTicketPlanner.createTicket(formData); }
 function generateGantt(params) { return GasTicketPlanner.generateGantt(params); }
+// Backlog関連
+function showBacklogSettingsDialog() { return GasTicketPlanner.showBacklogSettingsDialog(); }
+function getBacklogSettings() { return GasTicketPlanner.getBacklogSettings(); }
+function saveBacklogSettings(config) { return GasTicketPlanner.saveBacklogSettings(config); }
+function clearBacklogSettings() { return GasTicketPlanner.clearBacklogSettings(); }
+function testBacklogConnection(config) { return GasTicketPlanner.testBacklogConnection(config); }
+function isBacklogConfigured() { return GasTicketPlanner.isBacklogConfigured(); }
 `;
 
 code = code + globalExports;

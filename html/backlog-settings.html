@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+        margin: 0;
+        padding: 16px;
+        background-color: #fafafa;
+      }
+
+      h2 {
+        margin: 0 0 8px 0;
+        color: #333;
+        font-size: 18px;
+      }
+
+      p.description {
+        color: #666;
+        font-size: 13px;
+        margin: 0 0 16px 0;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: 500;
+        color: #555;
+        font-size: 14px;
+      }
+
+      .required::after {
+        content: ' *';
+        color: #d32f2f;
+      }
+
+      input[type='text'],
+      input[type='password'],
+      input[type='number'] {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: #4285f4;
+      }
+
+      .help-text {
+        color: #888;
+        font-size: 12px;
+        margin-top: 4px;
+      }
+
+      .error {
+        color: #d32f2f;
+        font-size: 12px;
+        margin-top: 4px;
+        display: none;
+      }
+
+      .error.show {
+        display: block;
+      }
+
+      .button-group {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 24px;
+      }
+
+      button {
+        padding: 10px 24px;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      button.primary {
+        background-color: #4285f4;
+        color: white;
+      }
+
+      button.primary:hover {
+        background-color: #3367d6;
+      }
+
+      button.primary:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+
+      button.secondary {
+        background-color: #f5f5f5;
+        color: #333;
+      }
+
+      button.secondary:hover {
+        background-color: #e0e0e0;
+      }
+
+      button.danger {
+        background-color: #d32f2f;
+        color: white;
+      }
+
+      button.danger:hover {
+        background-color: #b71c1c;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 20px;
+      }
+
+      .loading.show {
+        display: block;
+      }
+
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #4285f4;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 8px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .status {
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+      }
+
+      .status.success {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+      }
+
+      .status.error {
+        background-color: #ffebee;
+        color: #c62828;
+      }
+
+      .status.warning {
+        background-color: #fff3e0;
+        color: #ef6c00;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="form-container">
+      <p class="description">
+        BacklogのAPI設定を入力してください。設定はスクリプトプロパティに安全に保存されます。
+      </p>
+
+      <div id="connection-status"></div>
+
+      <div class="form-group">
+        <label for="host" class="required">Backlogホスト</label>
+        <input
+          type="text"
+          id="host"
+          placeholder="xxx.backlog.com または xxx.backlog.jp"
+        />
+        <div class="help-text">
+          BacklogのURLから「https://」を除いた部分を入力
+        </div>
+        <div class="error" id="host-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="apiKey" class="required">APIキー</label>
+        <input type="password" id="apiKey" placeholder="APIキーを入力" />
+        <div class="help-text">
+          Backlogの「個人設定」→「API」から取得できます
+        </div>
+        <div class="error" id="apiKey-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="projectId" class="required">プロジェクトID</label>
+        <input type="number" id="projectId" placeholder="プロジェクトIDを入力" />
+        <div class="help-text">プロジェクト設定画面のURLから確認できます</div>
+        <div class="error" id="projectId-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="issueTypeId" class="required">課題種別ID</label>
+        <input type="number" id="issueTypeId" placeholder="課題種別IDを入力" />
+        <div class="help-text">
+          作成する課題のデフォルト種別（タスク、バグ等）のID
+        </div>
+        <div class="error" id="issueTypeId-error"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="priorityId">優先度ID</label>
+        <input type="number" id="priorityId" placeholder="3（中）" value="3" />
+        <div class="help-text">2=高, 3=中, 4=低（デフォルト: 3）</div>
+      </div>
+
+      <div class="button-group">
+        <button type="button" class="danger" onclick="clearSettings()">
+          設定をクリア
+        </button>
+        <button type="button" class="secondary" onclick="testConnection()">
+          接続テスト
+        </button>
+        <button type="button" class="primary" id="submitBtn" onclick="saveSettings()">
+          保存
+        </button>
+      </div>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div id="loading-message">処理中...</div>
+    </div>
+
+    <script>
+      // 初期化
+      document.addEventListener('DOMContentLoaded', function () {
+        loadCurrentSettings();
+      });
+
+      // 現在の設定を読み込み
+      function loadCurrentSettings() {
+        setLoading(true, '設定を読み込み中...');
+        google.script.run
+          .withSuccessHandler(function (config) {
+            setLoading(false);
+            if (config) {
+              document.getElementById('host').value = config.host || '';
+              document.getElementById('apiKey').value = config.apiKey || '';
+              document.getElementById('projectId').value = config.projectId || '';
+              document.getElementById('issueTypeId').value = config.issueTypeId || '';
+              document.getElementById('priorityId').value = config.priorityId || 3;
+              showStatus('success', '設定が読み込まれました');
+            } else {
+              showStatus('warning', 'Backlog設定がまだ構成されていません');
+            }
+          })
+          .withFailureHandler(function (error) {
+            setLoading(false);
+            showStatus('error', 'エラー: ' + error.message);
+          })
+          .getBacklogSettings();
+      }
+
+      // 接続テスト
+      function testConnection() {
+        if (!validateForm()) {
+          return;
+        }
+
+        const config = getFormData();
+        setLoading(true, '接続をテスト中...');
+
+        google.script.run
+          .withSuccessHandler(function (result) {
+            setLoading(false);
+            if (result.success) {
+              showStatus(
+                'success',
+                '接続成功！プロジェクト: ' + result.projectName
+              );
+            } else {
+              showStatus('error', '接続失敗: ' + result.error);
+            }
+          })
+          .withFailureHandler(function (error) {
+            setLoading(false);
+            showStatus('error', '接続エラー: ' + error.message);
+          })
+          .testBacklogConnection(config);
+      }
+
+      // 設定を保存
+      function saveSettings() {
+        if (!validateForm()) {
+          return;
+        }
+
+        const config = getFormData();
+        setLoading(true, '設定を保存中...');
+
+        google.script.run
+          .withSuccessHandler(function (result) {
+            setLoading(false);
+            if (result.success) {
+              showStatus('success', '設定を保存しました');
+              setTimeout(function () {
+                google.script.host.close();
+              }, 1500);
+            } else {
+              showStatus('error', '保存失敗: ' + result.error);
+            }
+          })
+          .withFailureHandler(function (error) {
+            setLoading(false);
+            showStatus('error', '保存エラー: ' + error.message);
+          })
+          .saveBacklogSettings(config);
+      }
+
+      // 設定をクリア
+      function clearSettings() {
+        if (!confirm('Backlog設定をクリアしますか？')) {
+          return;
+        }
+
+        setLoading(true, '設定をクリア中...');
+
+        google.script.run
+          .withSuccessHandler(function () {
+            setLoading(false);
+            document.getElementById('host').value = '';
+            document.getElementById('apiKey').value = '';
+            document.getElementById('projectId').value = '';
+            document.getElementById('issueTypeId').value = '';
+            document.getElementById('priorityId').value = '3';
+            showStatus('success', '設定をクリアしました');
+          })
+          .withFailureHandler(function (error) {
+            setLoading(false);
+            showStatus('error', 'エラー: ' + error.message);
+          })
+          .clearBacklogSettings();
+      }
+
+      // フォームデータを取得
+      function getFormData() {
+        return {
+          host: document.getElementById('host').value.trim(),
+          apiKey: document.getElementById('apiKey').value.trim(),
+          projectId: parseInt(document.getElementById('projectId').value, 10),
+          issueTypeId: parseInt(
+            document.getElementById('issueTypeId').value,
+            10
+          ),
+          priorityId:
+            parseInt(document.getElementById('priorityId').value, 10) || 3,
+        };
+      }
+
+      // バリデーション
+      function validateForm() {
+        let isValid = true;
+
+        // ホスト
+        const host = document.getElementById('host').value.trim();
+        if (!host) {
+          showError('host', 'Backlogホストは必須です');
+          isValid = false;
+        } else if (!host.includes('backlog.')) {
+          showError('host', '有効なBacklogホストを入力してください');
+          isValid = false;
+        } else {
+          hideError('host');
+        }
+
+        // APIキー
+        const apiKey = document.getElementById('apiKey').value.trim();
+        if (!apiKey) {
+          showError('apiKey', 'APIキーは必須です');
+          isValid = false;
+        } else {
+          hideError('apiKey');
+        }
+
+        // プロジェクトID
+        const projectId = document.getElementById('projectId').value;
+        if (!projectId || isNaN(parseInt(projectId, 10))) {
+          showError('projectId', 'プロジェクトIDは数値で入力してください');
+          isValid = false;
+        } else {
+          hideError('projectId');
+        }
+
+        // 課題種別ID
+        const issueTypeId = document.getElementById('issueTypeId').value;
+        if (!issueTypeId || isNaN(parseInt(issueTypeId, 10))) {
+          showError('issueTypeId', '課題種別IDは数値で入力してください');
+          isValid = false;
+        } else {
+          hideError('issueTypeId');
+        }
+
+        return isValid;
+      }
+
+      // エラー表示
+      function showError(fieldId, message) {
+        const errorEl = document.getElementById(fieldId + '-error');
+        if (errorEl) {
+          errorEl.textContent = message;
+          errorEl.classList.add('show');
+        }
+      }
+
+      // エラー非表示
+      function hideError(fieldId) {
+        const errorEl = document.getElementById(fieldId + '-error');
+        if (errorEl) {
+          errorEl.classList.remove('show');
+        }
+      }
+
+      // ステータス表示
+      function showStatus(type, message) {
+        const statusEl = document.getElementById('connection-status');
+        statusEl.className = 'status ' + type;
+        statusEl.textContent = message;
+        statusEl.style.display = 'block';
+      }
+
+      // ローディング表示切替
+      function setLoading(loading, message) {
+        document.getElementById('form-container').style.display = loading
+          ? 'none'
+          : 'block';
+        document.getElementById('loading').classList.toggle('show', loading);
+        if (message) {
+          document.getElementById('loading-message').textContent = message;
+        }
+      }
+    </script>
+  </body>
+</html>
