@@ -18,7 +18,6 @@
     "noUnusedParameters": true,
     "declaration": false,
     "sourceMap": false,
-    "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]

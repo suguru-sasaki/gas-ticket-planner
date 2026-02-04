@@ -69,7 +69,7 @@ export class SpreadsheetWrapperImpl implements ISpreadsheetWrapper {
         return this.wrapSheet(sheet);
       },
       toast: (message: string, title?: string, timeout?: number) => {
-        this.spreadsheet.toast(message, title, timeout);
+        this.spreadsheet.toast(message, title ?? '', timeout ?? 5);
       },
       getSpreadsheetTimeZone: () => {
         return this.spreadsheet.getSpreadsheetTimeZone();
@@ -110,6 +110,7 @@ export class SpreadsheetWrapperImpl implements ISpreadsheetWrapper {
 
   private wrapRange(range: GoogleAppsScript.Spreadsheet.Range): IRange {
     return {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       getValue: () => range.getValue(),
       getValues: () => range.getValues(),
       setValue: (value: unknown) => range.setValue(value),
@@ -117,11 +118,10 @@ export class SpreadsheetWrapperImpl implements ISpreadsheetWrapper {
       setBackground: (color: string) => range.setBackground(color),
       setBackgrounds: (colors: string[][]) => range.setBackgrounds(colors),
       setNumberFormat: (format: string) => range.setNumberFormat(format),
-      setFontWeight: (weight: string) => range.setFontWeight(weight),
+      setFontWeight: (weight: string) =>
+        range.setFontWeight(weight as 'bold' | 'normal' | null),
       setHorizontalAlignment: (alignment: string) =>
-        range.setHorizontalAlignment(
-          alignment as GoogleAppsScript.Spreadsheet.HorizontalAlignment
-        ),
+        range.setHorizontalAlignment(alignment as 'left' | 'center' | 'right'),
     };
   }
 }

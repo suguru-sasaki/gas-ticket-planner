@@ -1,5 +1,3 @@
-import { Ticket } from './Ticket';
-
 /**
  * ガントチャートの1行を表すモデル
  */
@@ -18,10 +16,10 @@ export interface GanttRow {
   startDate: Date;
   /** 終了日 */
   endDate: Date;
-  /** 親チケットかどうか */
-  isParent: boolean;
-  /** 元チケット（色決定用） */
-  ticket: Ticket;
+  /** 日付セル（空文字配列） */
+  dateCells: string[];
+  /** 背景色配列（固定列 + 日付列） */
+  backgroundColors: string[];
 }
 
 /**

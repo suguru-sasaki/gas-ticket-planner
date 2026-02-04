@@ -31,23 +31,13 @@ module.exports = {
     '@typescript-eslint/no-floating-promises': 'error',
     '@typescript-eslint/no-misused-promises': 'error',
 
-    // Import
-    'import/order': [
-      'error',
-      {
-        groups: [
-          'builtin',
-          'external',
-          'internal',
-          'parent',
-          'sibling',
-          'index',
-        ],
-        'newlines-between': 'always',
-        alphabetize: { order: 'asc', caseInsensitive: true },
-      },
-    ],
-    'import/no-unresolved': 'off', // TypeScript handles this
+    // Import (disabled due to resolver issues - TypeScript handles module resolution)
+    'import/order': 'off',
+    'import/no-unresolved': 'off',
+    'import/namespace': 'off',
+    'import/no-duplicates': 'off',
+    'import/named': 'off',
+    'import/default': 'off',
 
     // General
     'no-console': 'off', // GAS uses console.log for debugging

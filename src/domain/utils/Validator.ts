@@ -46,7 +46,7 @@ export class Validator {
    * @returns 有効なDateオブジェクト
    * @throws AppError 無効な場合
    */
-  static validateDate(date: string | Date | unknown): Date {
+  static validateDate(date: unknown): Date {
     if (date instanceof Date) {
       if (isNaN(date.getTime())) {
         throw createAppError('E010');
