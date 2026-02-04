@@ -64,20 +64,31 @@ export class GanttService {
 
   /**
    * ガントチャートデータを生成
-   * @param input 生成入力
+   * @param input 生成入力（フィルタ用期間）
    * @returns ガント生成結果
    */
   generateGantt(input: GenerateGanttInput): GenerateGanttResult {
-    const dateRange = DateUtils.generateDateRange(input.startDate, input.endDate);
-
-    // ヘッダ行を生成（固定カラム + 日付）
-    const headers = this.generateHeaders(dateRange);
-
-    // 対象チケットを取得（期間内に重なる親チケット）
+    // 対象チケットを取得（フィルタ期間内に重なる親チケット）
     const parents = this.ticketRepository.findParentsInPeriod(
       input.startDate,
       input.endDate
     );
+
+    // 対象がない場合は空の結果を返す
+    if (parents.length === 0) {
+      return {
+        headers: this.generateHeaders([]),
+        rows: [],
+        backgrounds: [],
+        dateRange: [],
+      };
+    }
+
+    // ガント表示範囲を対象親チケット群のmin/maxから計算
+    const dateRange = this.calculateGanttDateRange(parents);
+
+    // ヘッダ行を生成（固定カラム + 日付）
+    const headers = this.generateHeaders(dateRange);
 
     // 行データと背景色を生成
     const rows: GanttRowData[] = [];
@@ -112,8 +123,15 @@ export class GanttService {
    * GanttRowモデルの配列を生成（レガシー互換）
    */
   generateGanttRows(startDate: Date, endDate: Date): GanttRow[] {
-    const dateRange = DateUtils.generateDateRange(startDate, endDate);
     const parents = this.ticketRepository.findParentsInPeriod(startDate, endDate);
+
+    // 対象がない場合は空配列を返す
+    if (parents.length === 0) {
+      return [];
+    }
+
+    // ガント表示範囲を対象親チケット群のmin/maxから計算
+    const dateRange = this.calculateGanttDateRange(parents);
 
     const ganttRows: GanttRow[] = [];
 
@@ -196,7 +214,7 @@ export class GanttService {
   /**
    * 日付セルを作成（空文字配列、色付けは背景で行う）
    */
-  private createDateCells(ticket: Ticket, dateRange: Date[]): string[] {
+  private createDateCells(_ticket: Ticket, dateRange: Date[]): string[] {
     return dateRange.map(() => '');
   }
 
@@ -254,6 +272,32 @@ export class GanttService {
     const ticketStart = DateUtils.stripTime(ticket.startDate);
     const ticketEnd = DateUtils.stripTime(ticket.endDate);
     return date >= ticketStart && date <= ticketEnd;
+  }
+
+  /**
+   * 対象親チケット群からガント表示範囲を計算
+   * @param parents 対象親チケット配列
+   * @returns 日付範囲（min開始日〜max終了日）
+   */
+  private calculateGanttDateRange(parents: Ticket[]): Date[] {
+    if (parents.length === 0) {
+      return [];
+    }
+
+    // 全親チケットの最小開始日と最大終了日を計算
+    let minStartDate = parents[0].startDate;
+    let maxEndDate = parents[0].endDate;
+
+    for (const parent of parents) {
+      if (parent.startDate < minStartDate) {
+        minStartDate = parent.startDate;
+      }
+      if (parent.endDate > maxEndDate) {
+        maxEndDate = parent.endDate;
+      }
+    }
+
+    return DateUtils.generateDateRange(minStartDate, maxEndDate);
   }
 
   /**

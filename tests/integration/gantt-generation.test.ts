@@ -91,6 +91,7 @@ describe('統合テスト: ガント生成フロー', () => {
         parentDescription: '// 重要案件\n新機能の開発',
         assignee: '山田太郎',
         startDate: new Date('2024-04-01'),
+        endDate: new Date('2024-04-09'), // 4/1〜4/9（子チケットの最終日に合わせる）
       });
       ticketService.saveTickets([project.parent, ...project.children]);
 
@@ -100,8 +101,8 @@ describe('統合テスト: ガント生成フロー', () => {
         endDate: new Date('2024-04-10'),
       });
 
-      // 3. ヘッダを確認
-      expect(gantt.headers).toHaveLength(17); // 固定7列 + 日付10列
+      // 3. ヘッダを確認（日付範囲は親チケットのmin/maxから計算: 4/1〜4/9 = 9日間）
+      expect(gantt.headers).toHaveLength(16); // 固定7列 + 日付9列
       expect(gantt.headers.slice(0, 7)).toEqual([
         '親チケット名',
         '子チケット名',
@@ -145,6 +146,7 @@ describe('統合テスト: ガント生成フロー', () => {
         parentDescription: '',
         assignee: '山田太郎',
         startDate: new Date('2024-04-01'),
+        endDate: new Date('2024-04-09'),
       });
       ticketService.saveTickets([project.parent, ...project.children]);
 
@@ -157,9 +159,9 @@ describe('統合テスト: ガント生成フロー', () => {
       // 背景色配列を確認
       expect(gantt.backgrounds).toHaveLength(4);
 
-      // 親チケットの背景色（4/1〜4/9が親の期間）
+      // 親チケットの背景色（4/1〜4/9が親の期間、日付範囲も同じ）
       const parentBg = gantt.backgrounds[0];
-      expect(parentBg).toHaveLength(17); // 固定7列 + 日付10列
+      expect(parentBg).toHaveLength(16); // 固定7列 + 日付9列
 
       // 固定列は白
       expect(parentBg.slice(0, 7).every(c => c === '#FFFFFF')).toBe(true);
@@ -186,6 +188,7 @@ describe('統合テスト: ガント生成フロー', () => {
         parentDescription: '',
         assignee: '山田太郎',
         startDate: new Date('2024-04-01'),
+        endDate: new Date('2024-04-09'),
       });
       ticketService.saveTickets([project1.parent, ...project1.children]);
 
@@ -195,6 +198,7 @@ describe('統合テスト: ガント生成フロー', () => {
         parentDescription: '',
         assignee: '鈴木花子',
         startDate: new Date('2024-04-05'),
+        endDate: new Date('2024-04-13'),
       });
       ticketService.saveTickets([project2.parent, ...project2.children]);
 
@@ -223,21 +227,23 @@ describe('統合テスト: ガント生成フロー', () => {
 
   describe('期間フィルタリング', () => {
     beforeEach(() => {
-      // 4月開始のプロジェクト
+      // 4月開始のプロジェクト（4/1〜4/9）
       const project1 = templateService.expandChildTickets({
         parentName: '4月プロジェクト',
         parentDescription: '',
         assignee: '山田太郎',
         startDate: new Date('2024-04-01'),
+        endDate: new Date('2024-04-09'),
       });
       ticketService.saveTickets([project1.parent, ...project1.children]);
 
-      // 5月開始のプロジェクト
+      // 5月開始のプロジェクト（5/1〜5/9）
       const project2 = templateService.expandChildTickets({
         parentName: '5月プロジェクト',
         parentDescription: '',
         assignee: '鈴木花子',
         startDate: new Date('2024-05-01'),
+        endDate: new Date('2024-05-09'),
       });
       ticketService.saveTickets([project2.parent, ...project2.children]);
     });
@@ -291,6 +297,7 @@ describe('統合テスト: ガント生成フロー', () => {
         parentDescription: '// メモ\n説明',
         assignee: '山田太郎',
         startDate: new Date('2024-04-01'),
+        endDate: new Date('2024-04-09'),
       });
       ticketService.saveTickets([project.parent, ...project.children]);
 
@@ -308,8 +315,8 @@ describe('統合テスト: ガント生成フロー', () => {
       expect(parentRow.memo).toBe('メモ');
       expect(parentRow.assignee).toBe('山田太郎');
       expect(parentRow.status).toBe('未着手');
-      expect(parentRow.dateCells).toHaveLength(10);
-      expect(parentRow.backgroundColors).toHaveLength(17);
+      expect(parentRow.dateCells).toHaveLength(9); // 4/1〜4/9 = 9日間
+      expect(parentRow.backgroundColors).toHaveLength(16); // 固定7列 + 日付9列
     });
   });
 });

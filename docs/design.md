@@ -447,12 +447,14 @@ interface CreateTicketParams {
 ```typescript
 class GanttService {
   constructor(
-    private ticketService: TicketService,
+    private ticketRepo: TicketRepository,
     private settingsRepo: SettingsRepository
   ) {}
 
   /**
    * ガント生成用のデータを作成
+   * 1. フィルタ期間に重なる親チケットを抽出
+   * 2. 対象親チケット群のmin(開始日)〜max(終了日)をガント表示範囲とする
    * @param startDate フィルタ開始日
    * @param endDate フィルタ終了日
    * @returns ガントデータ

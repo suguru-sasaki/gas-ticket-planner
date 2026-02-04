@@ -6,7 +6,8 @@
   "scripts": {
     "clean": "rm -rf dist",
     "prebuild": "npm run clean && mkdir -p dist",
-    "build": "tsc && cp appsscript.json dist/ && cp html/*.html dist/",
+    "build": "node esbuild.config.mjs && cp appsscript.json dist/ && cp html/*.html dist/",
+    "build:tsc": "tsc && cp appsscript.json dist/ && cp html/*.html dist/",
     "build:watch": "tsc --watch",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
@@ -41,6 +42,7 @@
     "@types/node": "^20.11.19",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
     "@typescript-eslint/parser": "^7.0.2",
+    "esbuild": "^0.27.2",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.1",

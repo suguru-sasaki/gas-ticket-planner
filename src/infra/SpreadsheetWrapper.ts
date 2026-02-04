@@ -10,21 +10,24 @@ export interface ISheet {
   getRange(row: number, col: number, numRows?: number, numCols?: number): IRange;
   setFrozenRows(rows: number): void;
   setFrozenColumns(cols: number): void;
+  setColumnWidth(column: number, width: number): void;
 }
 
 /**
  * レンジインターフェース
+ * メソッドチェーン対応（setXXX系はIRangeを返す）
  */
 export interface IRange {
   getValue(): unknown;
   getValues(): unknown[][];
-  setValue(value: unknown): void;
-  setValues(values: unknown[][]): void;
-  setBackground(color: string): void;
-  setBackgrounds(colors: string[][]): void;
-  setNumberFormat(format: string): void;
-  setFontWeight(weight: string): void;
-  setHorizontalAlignment(alignment: string): void;
+  setValue(value: unknown): IRange;
+  setValues(values: unknown[][]): IRange;
+  setBackground(color: string): IRange;
+  setBackgrounds(colors: string[][]): IRange;
+  setNumberFormat(format: string): IRange;
+  setFontWeight(weight: string): IRange;
+  setFontSize(size: number): IRange;
+  setHorizontalAlignment(alignment: string): IRange;
 }
 
 /**
@@ -105,23 +108,48 @@ export class SpreadsheetWrapperImpl implements ISpreadsheetWrapper {
       },
       setFrozenRows: (rows: number) => sheet.setFrozenRows(rows),
       setFrozenColumns: (cols: number) => sheet.setFrozenColumns(cols),
+      setColumnWidth: (column: number, width: number) => sheet.setColumnWidth(column, width),
     };
   }
 
   private wrapRange(range: GoogleAppsScript.Spreadsheet.Range): IRange {
-    return {
+    const wrapped: IRange = {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       getValue: () => range.getValue(),
       getValues: () => range.getValues(),
-      setValue: (value: unknown) => range.setValue(value),
-      setValues: (values: unknown[][]) => range.setValues(values),
-      setBackground: (color: string) => range.setBackground(color),
-      setBackgrounds: (colors: string[][]) => range.setBackgrounds(colors),
-      setNumberFormat: (format: string) => range.setNumberFormat(format),
-      setFontWeight: (weight: string) =>
-        range.setFontWeight(weight as 'bold' | 'normal' | null),
-      setHorizontalAlignment: (alignment: string) =>
-        range.setHorizontalAlignment(alignment as 'left' | 'center' | 'right'),
+      setValue: (value: unknown) => {
+        range.setValue(value);
+        return wrapped;
+      },
+      setValues: (values: unknown[][]) => {
+        range.setValues(values);
+        return wrapped;
+      },
+      setBackground: (color: string) => {
+        range.setBackground(color);
+        return wrapped;
+      },
+      setBackgrounds: (colors: string[][]) => {
+        range.setBackgrounds(colors);
+        return wrapped;
+      },
+      setNumberFormat: (format: string) => {
+        range.setNumberFormat(format);
+        return wrapped;
+      },
+      setFontWeight: (weight: string) => {
+        range.setFontWeight(weight as 'bold' | 'normal' | null);
+        return wrapped;
+      },
+      setFontSize: (size: number) => {
+        range.setFontSize(size);
+        return wrapped;
+      },
+      setHorizontalAlignment: (alignment: string) => {
+        range.setHorizontalAlignment(alignment as 'left' | 'center' | 'right');
+        return wrapped;
+      },
     };
+    return wrapped;
   }
 }

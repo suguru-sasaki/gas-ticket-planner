@@ -9,6 +9,7 @@ Googleスプレッドシート上で以下の機能を提供します：
 - **チケット作成**: テンプレートベースで親子チケットを自動生成
 - **ガント可視化**: 指定期間のチケットをガントチャートで表示
 - **環境分離**: dev/prod環境への個別デプロイ対応
+- **自動初期化**: スプレッドシートを開くと必要なシートを自動作成
 
 ## 技術スタック
 
@@ -16,7 +17,7 @@ Googleスプレッドシート上で以下の機能を提供します：
 |-----|------|
 | 言語 | TypeScript |
 | ランタイム | Google Apps Script (V8) |
-| ビルド | TypeScript Compiler (tsc) |
+| ビルド | esbuild (IIFE形式でバンドル) |
 | デプロイ | clasp |
 | テスト | Jest + ts-jest |
 | Lint | ESLint |
@@ -39,11 +40,7 @@ gas-ticket-planner/
 │   ├── test-plan.md              # テスト計画
 │   └── progress.md               # 進捗管理
 ├── src/
-│   ├── main.ts                   # エントリポイント（onOpen等）
-│   ├── ui/
-│   │   ├── MenuController.ts     # メニュー制御
-│   │   ├── UiController.ts       # UIハンドラ
-│   │   └── DialogService.ts      # ダイアログ表示
+│   ├── main.ts                   # エントリポイント（グローバル関数定義）
 │   ├── domain/
 │   │   ├── models/
 │   │   │   ├── Ticket.ts
@@ -62,12 +59,13 @@ gas-ticket-planner/
 │   │       └── Validator.ts
 │   ├── infra/
 │   │   ├── SpreadsheetWrapper.ts
-│   │   ├── repositories/
-│   │   │   ├── TicketRepository.ts
-│   │   │   ├── TemplateRepository.ts
-│   │   │   ├── AssigneeRepository.ts
-│   │   │   └── SettingsRepository.ts
-│   │   └── SheetNames.ts
+│   │   ├── SheetInitializer.ts   # シート自動初期化
+│   │   ├── SheetNames.ts
+│   │   └── repositories/
+│   │       ├── TicketRepository.ts
+│   │       ├── TemplateRepository.ts
+│   │       ├── AssigneeRepository.ts
+│   │       └── SettingsRepository.ts
 │   ├── errors/
 │   │   └── AppError.ts
 │   └── types/
@@ -88,7 +86,8 @@ gas-ticket-planner/
 │   └── integration/
 │       └── GanttGeneration.test.ts
 ├── dist/                         # ビルド成果物（clasp push対象）
-├── .clasp.json                   # 現在の環境設定（gitignore）
+├── esbuild.config.mjs            # esbuildビルド設定
+├── .clasp.json                   # 現在の環境設定（.clasp.dev/prodからコピー）
 ├── .clasp.dev.json               # 開発環境設定
 ├── .clasp.prod.json              # 本番環境設定
 ├── appsscript.json               # GASマニフェスト
@@ -165,7 +164,7 @@ npx clasp login
 # 開発環境へデプロイ
 npm run push:dev
 
-# スプレッドシートを開いてシート構造を初期化
+# スプレッドシートを開く（シートは自動で初期化されます）
 npm run open:dev
 ```
 
@@ -176,16 +175,18 @@ npm run open:dev
 ### 日常の開発
 
 ```bash
-# 1. TypeScriptをウォッチモードでビルド
-npm run build:watch
+# 1. コードを編集
 
-# 2. 別ターミナルでテストをウォッチモード実行
-npm run test:watch
+# 2. 型チェック
+npm run typecheck
 
-# 3. 変更をプッシュ
+# 3. テスト実行
+npm test
+
+# 4. ビルド＆プッシュ
 npm run push:dev
 
-# 4. 動作確認
+# 5. 動作確認
 npm run open:dev
 ```
 
@@ -256,8 +257,9 @@ npm run push:prod
 
 | コマンド | 説明 |
 |---------|------|
-| `npm run build` | TypeScriptをビルド |
-| `npm run build:watch` | ウォッチモードでビルド |
+| `npm run build` | esbuildでバンドル（GAS用IIFE形式） |
+| `npm run build:tsc` | TypeScriptコンパイル（tsc使用） |
+| `npm run build:watch` | ウォッチモードでtscビルド |
 | `npm run lint` | ESLintを実行 |
 | `npm run lint:fix` | ESLint + 自動修正 |
 | `npm run format` | Prettierでフォーマット |
@@ -277,29 +279,41 @@ npm run push:prod
 
 ## シート構造
 
-デプロイ後、以下のシートを手動で作成してください（将来的には初期化スクリプトを提供予定）：
+スプレッドシートを開くと、以下のシートが自動的に作成されます（左から順）：
 
-### 使い方シート
+### 1. 使い方シート
 
-ユーザー向け説明を記載
+ユーザー向けの操作説明を記載
 
-### 担当者リストシート
+### 2. 担当者リストシート
 
 | 列 | 内容 |
 |----|------|
 | A | 担当者名 |
 | B | メールアドレス |
 
-### テンプレートシート
+### 3. テンプレートシート
 
 | 列 | 内容 |
 |----|------|
-| A | 子チケット名 |
+| A | テンプレート名 |
 | B | 説明文 |
 | C | 開始日オフセット |
 | D | 期間（日数） |
 
-### チケット管理シート
+### 4. 可視化設定シート
+
+| 設定項目 | デフォルト値 |
+|---------|-------------|
+| 親チケット色 | #4285F4 |
+| 子チケット色_未着手 | #E0E0E0 |
+| 子チケット色_進行中 | #FFC107 |
+| 子チケット色_完了 | #4CAF50 |
+| 今日の日付色 | #FFEB3B |
+| 週末色 | #F5F5F5 |
+| ヘッダ背景色 | #E3F2FD |
+
+### 5. チケット管理シート
 
 | 列 | 内容 |
 |----|------|
@@ -313,18 +327,6 @@ npm run push:prod
 | H | 開始日 |
 | I | 終了日 |
 | J | 作成日時 |
-
-### 可視化設定シート
-
-| 設定項目 | デフォルト値 |
-|---------|-------------|
-| 親チケット色 | #4285F4 |
-| 子チケット色_未着手 | #E0E0E0 |
-| 子チケット色_進行中 | #FFC107 |
-| 子チケット色_完了 | #4CAF50 |
-| 今日の日付色 | #FFEB3B |
-| 週末色 | #F5F5F5 |
-| ヘッダ背景色 | #E3F2FD |
 
 ---
 
@@ -356,6 +358,12 @@ npm test -- --verbose
 # 特定のテストのみ実行
 npm test -- -t "テスト名"
 ```
+
+### シートが自動作成されない
+
+1. Apps Scriptエディタで`onOpen`関数を手動実行
+2. 必要な権限を承認
+3. スプレッドシートを再読み込み
 
 ---
 

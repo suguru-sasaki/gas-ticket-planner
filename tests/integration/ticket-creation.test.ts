@@ -70,21 +70,21 @@ describe('統合テスト: チケット作成フロー', () => {
 
   describe('テンプレートからのチケット作成→保存→取得', () => {
     it('テンプレートから展開したチケットを保存して取得できる', () => {
-      // 1. テンプレートから展開
+      // 1. テンプレートから展開（終了日はユーザー入力）
       const result = templateService.expandChildTickets({
         parentName: 'Webアプリ開発',
         parentDescription: '// 優先度高\n新規Webアプリケーションの開発',
         assignee: '山田太郎',
         startDate: new Date('2024-04-01'),
+        endDate: new Date('2024-04-30'), // ユーザー入力の終了日
       });
 
       // 2. 展開結果を確認
       expect(result.parent.name).toBe('Webアプリ開発');
       expect(result.children).toHaveLength(5);
 
-      // 親の終了日は最後の子チケットの終了日と同じ
-      // リリース: 開始日+18 から 1日間 → 終了日 = 開始日+18
-      expect(result.parent.endDate).toEqual(new Date('2024-04-19'));
+      // 親の終了日はユーザー入力値
+      expect(result.parent.endDate).toEqual(new Date('2024-04-30'));
 
       // 3. チケットを保存
       ticketService.saveTickets([result.parent, ...result.children]);
@@ -131,6 +131,7 @@ describe('統合テスト: チケット作成フロー', () => {
         parentDescription: '',
         assignee: '山田太郎',
         startDate: new Date('2024-04-01'),
+        endDate: new Date('2024-04-30'),
       });
       ticketService.saveTickets([project1.parent, ...project1.children]);
 
@@ -140,6 +141,7 @@ describe('統合テスト: チケット作成フロー', () => {
         parentDescription: '',
         assignee: '鈴木花子',
         startDate: new Date('2024-04-15'),
+        endDate: new Date('2024-05-15'),
       });
       ticketService.saveTickets([project2.parent, ...project2.children]);
 
@@ -167,6 +169,7 @@ describe('統合テスト: チケット作成フロー', () => {
         parentDescription: '',
         assignee: '山田太郎',
         startDate: new Date('2024-04-01'),
+        endDate: new Date('2024-04-30'),
       });
       ticketService.saveTickets([project1.parent, ...project1.children]);
 
@@ -186,6 +189,7 @@ describe('統合テスト: チケット作成フロー', () => {
         parentDescription: '',
         assignee: '鈴木花子',
         startDate: new Date('2024-05-01'),
+        endDate: new Date('2024-05-31'),
       });
       ticketService.saveTickets([project2.parent, ...project2.children]);
 
@@ -209,6 +213,7 @@ describe('統合テスト: チケット作成フロー', () => {
         parentDescription: '',
         assignee: '山田太郎',
         startDate: new Date('2024-04-01'),
+        endDate: new Date('2024-04-19'),
       });
       ticketService.saveTickets([project1.parent, ...project1.children]);
 
@@ -218,6 +223,7 @@ describe('統合テスト: チケット作成フロー', () => {
         parentDescription: '',
         assignee: '鈴木花子',
         startDate: new Date('2024-05-01'),
+        endDate: new Date('2024-05-19'),
       });
       ticketService.saveTickets([project2.parent, ...project2.children]);
 
@@ -227,6 +233,7 @@ describe('統合テスト: チケット作成フロー', () => {
         parentDescription: '',
         assignee: '田中一郎',
         startDate: new Date('2024-06-01'),
+        endDate: new Date('2024-06-19'),
       });
       ticketService.saveTickets([project3.parent, ...project3.children]);
     });
@@ -281,6 +288,7 @@ describe('統合テスト: チケット作成フロー', () => {
           parentDescription: '',
           assignee: '存在しない担当者',
           startDate: new Date('2024-04-01'),
+          endDate: new Date('2024-04-30'),
         })
       ).toThrow('担当者 "存在しない担当者" が存在しません');
     });
@@ -325,6 +333,7 @@ describe('統合テスト: チケット作成フロー', () => {
           parentDescription: '',
           assignee: '山田太郎',
           startDate: new Date('2024-04-01'),
+          endDate: new Date('2024-04-30'),
         })
       ).toThrow('テンプレートが登録されていません');
     });

@@ -56,3 +56,16 @@ export const SETTING_LABEL_TO_KEY: Record<string, keyof GanttSettings> = {
   週末色: 'weekendColor',
   ヘッダ背景色: 'headerBackgroundColor',
 };
+
+/**
+ * 設定項目の日本語キー（スプレッドシート上の表示名）
+ */
+export const SETTING_KEYS = {
+  parentColor: '親チケット色',
+  childColorNotStarted: '子チケット色_未着手',
+  childColorInProgress: '子チケット色_進行中',
+  childColorCompleted: '子チケット色_完了',
+  todayColor: '今日の日付色',
+  weekendColor: '週末色',
+  headerBackgroundColor: 'ヘッダ背景色',
+} as const;

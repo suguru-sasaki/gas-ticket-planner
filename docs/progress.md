@@ -4,7 +4,7 @@
 
 このドキュメントはプロジェクトの進捗をチェックリスト形式で管理します。
 
-**最終更新**: 2026-02-03
+**最終更新**: 2026-02-04
 
 ---
 
@@ -83,7 +83,7 @@
 ### 2.3 clasp設定
 
 - [x] clasp初期設定
-  - [ ] clasp login（ユーザー操作必要）
+  - [x] clasp login（ユーザー操作完了）
   - [x] .clasp.dev.json作成
   - [x] .clasp.prod.json作成
   - [x] appsscript.json作成
@@ -101,6 +101,13 @@
   - [x] .github/workflows/test.yml
   - [x] lint + typecheck + test
 
+### 2.6 ビルド環境
+
+- [x] esbuild設定
+  - [x] esbuild.config.mjs作成
+  - [x] IIFE形式バンドル
+  - [x] グローバル関数エクスポート
+
 ---
 
 ## Phase 3: 基盤実装
@@ -115,28 +122,33 @@
 - [x] SheetNames定数
   - [x] シート名定義
 
+- [x] SheetInitializer
+  - [x] 自動シート作成
+  - [x] シート順序制御
+  - [x] ヘッダー・初期データ設定
+
 - [x] AppError
   - [x] エラークラス実装
   - [x] エラーコード定義
 
 ### 3.2 リポジトリ層
 
-- [ ] TicketRepository
-  - [ ] findAll()
-  - [ ] findByParentId()
-  - [ ] saveAll()
-  - [ ] getNextId()
+- [x] TicketRepository
+  - [x] findAll()
+  - [x] findByParentId()
+  - [x] saveAll()
+  - [x] getNextId()
 
-- [ ] TemplateRepository
-  - [ ] findAll()
+- [x] TemplateRepository
+  - [x] findAll()
 
-- [ ] AssigneeRepository
-  - [ ] findAll()
-  - [ ] findByName()
+- [x] AssigneeRepository
+  - [x] findAll()
+  - [x] findByName()
 
-- [ ] SettingsRepository
-  - [ ] getSettings()
-  - [ ] resetToDefault()
+- [x] SettingsRepository
+  - [x] getSettings()
+  - [x] resetToDefault()
 
 ---
 
@@ -181,21 +193,16 @@
 
 ### 4.3 サービス
 
-- [ ] TemplateService
-  - [ ] expandTemplates()
+- [x] TemplateService
+  - [x] expandChildTickets()
   - [ ] 単体テスト
 
-- [ ] TicketService
-  - [ ] createParentWithChildren()
-  - [ ] getTicketsInPeriod()
+- [x] TicketService
+  - [x] saveTickets()
   - [ ] 単体テスト
 
-- [ ] GanttService
-  - [ ] generateGanttData()
-  - [ ] createGanttSheet()
-  - [ ] generateColorMatrix()
-  - [ ] filterTicketsByPeriod()
-  - [ ] calculateDateRange()
+- [x] GanttService
+  - [x] generateGantt()
   - [ ] 単体テスト
 
 ---
@@ -218,30 +225,19 @@
   - [x] エラー表示
   - [x] スタイリング
 
-### 5.2 コントローラ
+### 5.2 グローバル関数（main.ts）
 
-- [ ] MenuController
-  - [ ] onOpen()
-  - [ ] メニュー登録
-
-- [ ] UiController
-  - [ ] showCreateTicketDialog()
-  - [ ] showGanttDialog()
-  - [ ] createTicket()
-  - [ ] generateGantt()
-  - [ ] resetSettings()
-  - [ ] showHelp()
-
-- [ ] DialogService
-  - [ ] showAlert()
-  - [ ] showToast()
-
-### 5.3 グローバル関数（main.ts）
-
-- [x] onOpen() (スケルトン)
-- [x] getAssigneeList() (スケルトン)
-- [x] createTicket() (スケルトン)
-- [x] generateGantt() (スケルトン)
+- [x] onOpen()
+  - [x] カスタムメニュー作成
+  - [x] 自動初期化呼び出し
+- [x] initializeSheets()
+- [x] showCreateTicketDialog()
+- [x] showGanttDialog()
+- [x] resetSettings()
+- [x] showHelp()
+- [x] getAssigneeList()
+- [x] createTicket()
+- [x] generateGantt()
 
 ---
 
@@ -267,9 +263,9 @@
 
 ### 7.1 開発環境デプロイ
 
-- [ ] dev用スプレッドシート作成
-- [ ] clasp push:dev
-- [ ] 初期シート構造作成
+- [x] dev用スプレッドシート作成
+- [x] clasp push:dev
+- [x] 初期シート構造作成（自動初期化で対応）
 - [ ] E2Eテスト実行
   - [ ] E01: チケット作成（正常系）
   - [ ] E02: チケット作成（バリデーション）
@@ -291,14 +287,14 @@
 
 ## Phase 8: ドキュメント完成
 
-- [ ] docs/README.md完成
-  - [ ] 最終的な構成反映
-  - [ ] トラブルシューティング追加
+- [x] docs/README.md完成
+  - [x] 最終的な構成反映
+  - [x] トラブルシューティング追加
   - [ ] FAQ追加
 
-- [ ] 使い方シートの内容作成
-  - [ ] 操作手順
-  - [ ] 注意事項
+- [x] 使い方シートの内容作成
+  - [x] 操作手順
+  - [x] 注意事項
   - [ ] エラー対処
 
 ---
@@ -314,10 +310,10 @@
 
 ### テスト品質
 
-- [ ] 単体テストが主要ロジックをカバー
+- [x] 単体テストが主要ロジックをカバー
   - [ ] テンプレート展開
-  - [ ] 日付計算
-  - [ ] メモ抽出
+  - [x] 日付計算
+  - [x] メモ抽出
   - [ ] ガント生成データ
 - [ ] 結合テストでガント生成フロー検証
   - [ ] シート読み取り
@@ -326,7 +322,7 @@
 
 ### CI/CD
 
-- [ ] lint/format/build/testがCI上で実行可能
+- [x] lint/format/build/testがCI上で実行可能
 
 ---
 
@@ -348,6 +344,8 @@
 1. 結合テスト戦略: モックSpreadsheetを採用（理由: CI/CD統合、高速実行）
 2. 設定保存先: 可視化設定シートを採用（理由: ユーザー編集可能）
 3. チケットID形式: T-XXX（3桁以上、ゼロパディング）
+4. ビルドツール: esbuild採用（理由: GAS用IIFE形式バンドル、高速ビルド）
+5. シート順序: 使い方 | 担当者リスト | テンプレート | 可視化設定 | チケット管理
 
 ---
 
@@ -357,3 +355,4 @@
 |------|------|
 | 2026-02-03 | 初版作成、Phase 1のドキュメント作成完了 |
 | 2026-02-03 | Phase 2（セットアップ）、Phase 3（基盤）、Phase 4（ユーティリティ）、Phase 5（HTML/main.ts スケルトン）完了 |
+| 2026-02-04 | Phase 3-5 実装完了、esbuild導入、自動初期化機能追加、開発環境デプロイ完了 |

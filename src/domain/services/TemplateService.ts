@@ -18,6 +18,8 @@ export interface ExpandChildTicketsInput {
   assignee: string;
   /** 親チケット開始日 */
   startDate: Date;
+  /** 親チケット終了日（ユーザー入力） */
+  endDate: Date;
 }
 
 /**
@@ -65,10 +67,7 @@ export class TemplateService {
 
     const now = new Date();
 
-    // 親チケット終了日を計算（最後の子チケットの終了日）
-    const parentEndDate = this.calculateParentEndDate(input.startDate, templates);
-
-    // 親チケット作成
+    // 親チケット作成（終了日はユーザー入力）
     const parent: Ticket = {
       id: parentId,
       parentId: null,
@@ -78,7 +77,7 @@ export class TemplateService {
       assignee: input.assignee,
       status: 'notStarted',
       startDate: input.startDate,
-      endDate: parentEndDate,
+      endDate: input.endDate,
       createdAt: now,
     };
 
@@ -95,22 +94,6 @@ export class TemplateService {
     );
 
     return { parent, children };
-  }
-
-  /**
-   * 親チケットの終了日を計算
-   */
-  private calculateParentEndDate(startDate: Date, templates: Template[]): Date {
-    let maxEndOffset = 0;
-
-    for (const template of templates) {
-      const endOffset = template.startOffset + template.duration - 1;
-      if (endOffset > maxEndOffset) {
-        maxEndOffset = endOffset;
-      }
-    }
-
-    return DateUtils.addDays(startDate, maxEndOffset);
   }
 
   /**

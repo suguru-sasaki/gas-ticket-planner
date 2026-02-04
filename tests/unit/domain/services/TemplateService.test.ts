@@ -71,6 +71,7 @@ describe('TemplateService', () => {
         parentDescription: '機能Aの開発作業',
         assignee: '山田太郎',
         startDate: new Date('2024-01-10'),
+        endDate: new Date('2024-01-31'), // ユーザー入力の終了日
       });
 
       // 親チケット確認
@@ -79,8 +80,8 @@ describe('TemplateService', () => {
       expect(result.parent.name).toBe('機能A開発');
       expect(result.parent.assignee).toBe('山田太郎');
       expect(result.parent.startDate).toEqual(new Date('2024-01-10'));
-      // 親の終了日 = 開始日 + 最後の子チケット終了オフセット (8 + 2 - 1 = 9日後)
-      expect(result.parent.endDate).toEqual(new Date('2024-01-19'));
+      // 親の終了日 = ユーザー入力値
+      expect(result.parent.endDate).toEqual(new Date('2024-01-31'));
 
       // 子チケット確認
       expect(result.children).toHaveLength(3);
@@ -129,6 +130,7 @@ describe('TemplateService', () => {
         parentDescription: '',
         assignee: '山田太郎',
         startDate: new Date('2024-02-01'),
+        endDate: new Date('2024-02-28'),
       });
 
       expect(result.parent.id).toBe('T-002');
@@ -148,6 +150,7 @@ describe('TemplateService', () => {
           parentDescription: '',
           assignee: '存在しない担当者',
           startDate: new Date('2024-01-10'),
+          endDate: new Date('2024-01-31'),
         })
       ).toThrow('担当者 "存在しない担当者" が存在しません');
     });
@@ -161,6 +164,7 @@ describe('TemplateService', () => {
           parentDescription: '',
           assignee: '山田太郎',
           startDate: new Date('2024-01-10'),
+          endDate: new Date('2024-01-31'),
         })
       ).toThrow('テンプレートが登録されていません');
     });
@@ -180,6 +184,7 @@ describe('TemplateService', () => {
         parentDescription: '',
         assignee: '山田太郎',
         startDate: new Date('2024-01-10'),
+        endDate: new Date('2024-01-31'),
       });
 
       expect(result.parent.status).toBe('notStarted');
@@ -198,6 +203,7 @@ describe('TemplateService', () => {
         parentDescription: '',
         assignee: '山田太郎',
         startDate: new Date('2024-01-10'),
+        endDate: new Date('2024-01-31'),
       });
 
       expect(result.children[0].description).toBe(

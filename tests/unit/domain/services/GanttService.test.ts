@@ -325,6 +325,8 @@ describe('GanttService', () => {
 
   describe('背景色の適用', () => {
     it('チケット期間内の日付に色が適用される', () => {
+      // 親チケット: 1/10〜1/14（5日間）
+      // ガント表示範囲も親のmin/maxから計算されるので 1/10〜1/14
       setupSheets(
         [
           [
@@ -335,8 +337,8 @@ describe('GanttService', () => {
             '',
             '山田太郎',
             '未着手',
-            new Date('2024-01-11'),
-            new Date('2024-01-11'),
+            new Date('2024-01-10'),
+            new Date('2024-01-14'),
             new Date('2024-01-09'),
           ],
         ],
@@ -345,14 +347,18 @@ describe('GanttService', () => {
 
       const result = service.generateGantt({
         startDate: new Date('2024-01-10'),
-        endDate: new Date('2024-01-12'),
+        endDate: new Date('2024-01-14'),
       });
 
-      // 固定列7つ + 日付3列
-      // 1/10は期間外、1/11は期間内、1/12は期間外
-      expect(result.backgrounds[0][7]).not.toBe('#4285F4'); // 1/10
+      // 固定列7つ + 日付5列 = 12列
+      expect(result.backgrounds[0]).toHaveLength(12);
+
+      // 全ての日付列が親チケット色で塗られている
+      expect(result.backgrounds[0][7]).toBe('#4285F4'); // 1/10
       expect(result.backgrounds[0][8]).toBe('#4285F4'); // 1/11
-      expect(result.backgrounds[0][9]).not.toBe('#4285F4'); // 1/12
+      expect(result.backgrounds[0][9]).toBe('#4285F4'); // 1/12
+      expect(result.backgrounds[0][10]).toBe('#4285F4'); // 1/13
+      expect(result.backgrounds[0][11]).toBe('#4285F4'); // 1/14
     });
 
     it('子チケットは状態に応じた色が適用される', () => {

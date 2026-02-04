@@ -34,44 +34,56 @@ export class MockRange implements IRange {
     return result;
   }
 
-  setValue(value: unknown): void {
+  setValue(value: unknown): IRange {
     this.sheet.setData(this.startRow, this.startCol, value);
+    return this;
   }
 
-  setValues(values: unknown[][]): void {
+  setValues(values: unknown[][]): IRange {
     for (let r = 0; r < values.length; r++) {
       for (let c = 0; c < values[r].length; c++) {
         this.sheet.setData(this.startRow + r, this.startCol + c, values[r][c]);
       }
     }
+    return this;
   }
 
-  setBackground(color: string): void {
+  setBackground(color: string): IRange {
     for (let r = 0; r < this.numRows; r++) {
       for (let c = 0; c < this.numCols; c++) {
         this.sheet.setBackground(this.startRow + r, this.startCol + c, color);
       }
     }
+    return this;
   }
 
-  setBackgrounds(colors: string[][]): void {
+  setBackgrounds(colors: string[][]): IRange {
     for (let r = 0; r < colors.length; r++) {
       for (let c = 0; c < colors[r].length; c++) {
         this.sheet.setBackground(this.startRow + r, this.startCol + c, colors[r][c]);
       }
     }
+    return this;
   }
 
-  setNumberFormat(_format: string): void {
+  setNumberFormat(_format: string): IRange {
     // モック実装: 何もしない
+    return this;
   }
 
-  setFontWeight(_weight: string): void {
+  setFontWeight(_weight: string): IRange {
     // モック実装: 何もしない
+    return this;
   }
 
-  setHorizontalAlignment(_alignment: string): void {
+  setFontSize(_size: number): IRange {
     // モック実装: 何もしない
+    return this;
+  }
+
+  setHorizontalAlignment(_alignment: string): IRange {
+    // モック実装: 何もしない
+    return this;
   }
 }
 
@@ -114,6 +126,10 @@ export class MockSheet implements ISheet {
 
   setFrozenColumns(cols: number): void {
     this.frozenCols = cols;
+  }
+
+  setColumnWidth(_column: number, _width: number): void {
+    // モック実装: 何もしない
   }
 
   // テスト用アクセサ
