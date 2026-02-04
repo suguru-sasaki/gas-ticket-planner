@@ -36,6 +36,8 @@ export interface GenerateGanttResult {
   rows: GanttRowData[];
   /** 背景色情報 */
   backgrounds: string[][];
+  /** ヘッダ行の背景色情報 */
+  headerBackgrounds: string[];
   /** 日付範囲 */
   dateRange: Date[];
 }
@@ -90,6 +92,7 @@ export class GanttService {
         headers: this.generateHeaders([]),
         rows: [],
         backgrounds: [],
+        headerBackgrounds: [],
         dateRange: [],
       };
     }
@@ -104,6 +107,9 @@ export class GanttService {
 
     // ヘッダ行を生成（固定カラム + 日付）
     const headers = this.generateHeaders(dateRange);
+
+    // ヘッダ行の背景色を生成
+    const headerBackgrounds = this.createHeaderBackgrounds(dateRange, holidays);
 
     // 行データと背景色を生成
     const rows: GanttRowData[] = [];
@@ -130,6 +136,7 @@ export class GanttService {
       headers,
       rows,
       backgrounds,
+      headerBackgrounds,
       dateRange,
     };
   }
@@ -186,6 +193,41 @@ export class GanttService {
     const dateHeaders = dateRange.map(date => DateUtils.format(date, 'M/D'));
 
     return [...fixedHeaders, ...dateHeaders];
+  }
+
+  /**
+   * ヘッダ行の背景色配列を作成
+   */
+  private createHeaderBackgrounds(dateRange: Date[], holidays: Date[] = []): string[] {
+    const settings = this.settingsRepository.getSettings();
+    const backgrounds: string[] = [];
+
+    // 固定カラム（7列）はヘッダ背景色
+    for (let i = 0; i < 7; i++) {
+      backgrounds.push(settings.headerBackgroundColor);
+    }
+
+    // 日付カラム
+    for (const date of dateRange) {
+      const strippedDate = DateUtils.stripTime(date);
+      const isSunday = DateUtils.isSunday(strippedDate);
+      const isSaturday = DateUtils.isSaturday(strippedDate);
+      const isHoliday = HolidayService.isHoliday(strippedDate, holidays);
+
+      let bgColor = settings.headerBackgroundColor;
+
+      if (isHoliday || isSunday) {
+        // 祝日または日曜日
+        bgColor = settings.sundayColor;
+      } else if (isSaturday) {
+        // 土曜日
+        bgColor = settings.saturdayColor;
+      }
+
+      backgrounds.push(bgColor);
+    }
+
+    return backgrounds;
   }
 
   /**

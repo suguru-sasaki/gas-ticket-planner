@@ -369,12 +369,17 @@ function generateGantt(params: {
     sheet.getRange(1, 1, 1, ganttData.headers.length).setValues([ganttData.headers]);
 
     // ヘッダのスタイル設定
-    const settings = settingsRepo.getSettings();
     sheet
       .getRange(1, 1, 1, ganttData.headers.length)
       .setFontWeight('bold')
-      .setBackground(settings.headerBackgroundColor)
       .setHorizontalAlignment('center');
+
+    // ヘッダ行の背景色を設定（土日祝日で色分け）
+    if (ganttData.headerBackgrounds.length > 0) {
+      sheet
+        .getRange(1, 1, 1, ganttData.headerBackgrounds.length)
+        .setBackgrounds([ganttData.headerBackgrounds]);
+    }
 
     // データ行を書き込み
     if (ganttData.rows.length > 0) {
