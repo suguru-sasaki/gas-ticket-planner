@@ -117,7 +117,9 @@ export class SheetInitializer {
       [SETTING_KEYS.childColorInProgress, DEFAULT_SETTINGS.childColorInProgress],
       [SETTING_KEYS.childColorCompleted, DEFAULT_SETTINGS.childColorCompleted],
       [SETTING_KEYS.todayColor, DEFAULT_SETTINGS.todayColor],
-      [SETTING_KEYS.weekendColor, DEFAULT_SETTINGS.weekendColor],
+      [SETTING_KEYS.saturdayColor, DEFAULT_SETTINGS.saturdayColor],
+      [SETTING_KEYS.sundayColor, DEFAULT_SETTINGS.sundayColor],
+      [SETTING_KEYS.holidayColor, DEFAULT_SETTINGS.holidayColor],
       [SETTING_KEYS.headerBackgroundColor, DEFAULT_SETTINGS.headerBackgroundColor],
     ];
 

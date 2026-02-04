@@ -69,6 +69,24 @@ export class DateUtils {
   }
 
   /**
+   * 土曜日かどうかを判定
+   * @param date 日付
+   * @returns 土曜日ならtrue
+   */
+  static isSaturday(date: Date): boolean {
+    return date.getDay() === 6;
+  }
+
+  /**
+   * 日曜日かどうかを判定
+   * @param date 日付
+   * @returns 日曜日ならtrue
+   */
+  static isSunday(date: Date): boolean {
+    return date.getDay() === 0;
+  }
+
+  /**
    * 本日かどうかを判定
    * @param date 日付
    * @param timezone タイムゾーン（オプション）

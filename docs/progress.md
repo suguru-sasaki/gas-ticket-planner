@@ -303,7 +303,46 @@
 
 ---
 
-## Phase 8: ドキュメント完成
+## Phase 8: ガント表示改善
+
+### 8.1 日付ヘッダー改善
+
+- [x] ドキュメント更新（spec.md, design.md）
+- [ ] 日付フォーマットから曜日を削除
+- [ ] GanttService.generateHeaders() 修正
+
+### 8.2 曜日別・祝日色設定
+
+- [x] ドキュメント更新
+- [ ] GanttSettings型の更新
+  - [ ] weekendColor削除
+  - [ ] saturdayColor追加
+  - [ ] sundayColor追加
+  - [ ] holidayColor追加
+- [ ] DEFAULT_SETTINGS更新
+- [ ] SETTING_KEY_MAP, SETTING_LABEL_TO_KEY更新
+- [ ] SheetInitializer更新（可視化設定シート初期値）
+- [ ] SettingsRepository更新
+
+### 8.3 祝日取得機能
+
+- [ ] HolidayService実装
+  - [ ] Google Calendar API連携
+  - [ ] getHolidays() 実装
+  - [ ] isHoliday() 実装
+- [ ] GanttService.createRowBackground() 修正
+  - [ ] 土曜日/日曜日の色分け
+  - [ ] 祝日の色適用
+
+### 8.4 テスト・デプロイ
+
+- [ ] 単体テスト追加/修正
+- [ ] 開発環境デプロイ
+- [ ] 動作確認
+
+---
+
+## Phase 9: ドキュメント完成
 
 - [x] docs/README.md完成
   - [x] 最終的な構成反映
@@ -381,3 +420,4 @@
 | 2026-02-04 | Phase 7 E2Eテスト完了（8項目すべてPASS）、開発環境検証完了 |
 | 2026-02-04 | Backlog連携実装完了、開発環境デプロイ完了 |
 | 2026-02-04 | スタンドアロンモード削除（担当者リスト・チケット管理シート廃止）、Backlog連携必須化 |
+| 2026-02-04 | ガント表示改善（曜日削除、土曜/日曜/祝日の色分け）のドキュメント更新 |

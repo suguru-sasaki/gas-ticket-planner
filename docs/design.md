@@ -261,7 +261,9 @@ interface GanttSettings {
   childColorInProgress: string;  // 子チケット色（進行中）
   childColorCompleted: string;   // 子チケット色（完了）
   todayColor: string;            // 今日の日付色
-  weekendColor: string;          // 週末色
+  saturdayColor: string;         // 土曜日色（青系）
+  sundayColor: string;           // 日曜日色（赤系）
+  holidayColor: string;          // 祝日色（赤系）
   headerBackgroundColor: string; // ヘッダ背景色
 }
 
@@ -271,9 +273,39 @@ const DEFAULT_SETTINGS: GanttSettings = {
   childColorInProgress: '#FFC107',
   childColorCompleted: '#4CAF50',
   todayColor: '#FFEB3B',
-  weekendColor: '#F5F5F5',
+  saturdayColor: '#BBDEFB',      // 青系（Material Design Blue 100）
+  sundayColor: '#FFCDD2',        // 赤系（Material Design Red 100）
+  holidayColor: '#FFCDD2',       // 赤系（日曜日と同じ）
   headerBackgroundColor: '#E3F2FD',
 };
+```
+
+### 3.7 祝日取得
+
+```typescript
+/**
+ * 祝日サービス
+ * Google Calendar APIを使用して日本の祝日を取得
+ */
+class HolidayService {
+  private static readonly CALENDAR_ID = 'ja.japanese#holiday@group.v.calendar.google.com';
+
+  /**
+   * 指定期間内の祝日を取得
+   * @param startDate 開始日
+   * @param endDate 終了日
+   * @returns 祝日の日付配列
+   */
+  static getHolidays(startDate: Date, endDate: Date): Date[];
+
+  /**
+   * 指定日が祝日かどうかを判定
+   * @param date 判定対象日
+   * @param holidays 祝日リスト
+   * @returns 祝日ならtrue
+   */
+  static isHoliday(date: Date, holidays: Date[]): boolean;
+}
 ```
 
 ---

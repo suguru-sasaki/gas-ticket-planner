@@ -3,6 +3,7 @@ import { STATUS_LABELS } from '../../types';
 import { GanttRow } from '../models/GanttRow';
 import { Ticket } from '../models/Ticket';
 import { DateUtils } from '../utils/DateUtils';
+import { HolidayService } from '../utils/HolidayService';
 import { MemoExtractor } from '../utils/MemoExtractor';
 
 /**
@@ -96,6 +97,11 @@ export class GanttService {
     // ガント表示範囲を対象親チケット群のmin/maxから計算
     const dateRange = this.calculateGanttDateRange(parents);
 
+    // 祝日リストを取得
+    const holidays = dateRange.length > 0
+      ? HolidayService.getHolidays(dateRange[0], dateRange[dateRange.length - 1])
+      : [];
+
     // ヘッダ行を生成（固定カラム + 日付）
     const headers = this.generateHeaders(dateRange);
 
@@ -106,7 +112,7 @@ export class GanttService {
     for (const parent of parents) {
       // 親チケット行
       const parentRow = this.createParentRow(parent, dateRange);
-      const parentBg = this.createRowBackground(parent, dateRange, true);
+      const parentBg = this.createRowBackground(parent, dateRange, true, holidays);
       rows.push(parentRow);
       backgrounds.push(parentBg);
 
@@ -114,7 +120,7 @@ export class GanttService {
       const children = this.ticketRepository.findChildren(parent.id);
       for (const child of children) {
         const childRow = this.createChildRow(parent.name, child, dateRange);
-        const childBg = this.createRowBackground(child, dateRange, false);
+        const childBg = this.createRowBackground(child, dateRange, false, holidays);
         rows.push(childRow);
         backgrounds.push(childBg);
       }
@@ -142,16 +148,21 @@ export class GanttService {
     // ガント表示範囲を対象親チケット群のmin/maxから計算
     const dateRange = this.calculateGanttDateRange(parents);
 
+    // 祝日リストを取得
+    const holidays = dateRange.length > 0
+      ? HolidayService.getHolidays(dateRange[0], dateRange[dateRange.length - 1])
+      : [];
+
     const ganttRows: GanttRow[] = [];
 
     for (const parent of parents) {
       // 親チケット行
-      ganttRows.push(this.ticketToGanttRow(parent, '', dateRange));
+      ganttRows.push(this.ticketToGanttRow(parent, '', dateRange, holidays));
 
       // 子チケット行
       const children = this.ticketRepository.findChildren(parent.id);
       for (const child of children) {
-        ganttRows.push(this.ticketToGanttRow(child, parent.name, dateRange));
+        ganttRows.push(this.ticketToGanttRow(child, parent.name, dateRange, holidays));
       }
     }
 
@@ -172,10 +183,7 @@ export class GanttService {
       '終了日',
     ];
 
-    const dateHeaders = dateRange.map(date => {
-      const dayOfWeek = DateUtils.getDayOfWeek(date);
-      return `${DateUtils.format(date, 'M/D')}(${dayOfWeek})`;
-    });
+    const dateHeaders = dateRange.map(date => DateUtils.format(date, 'M/D'));
 
     return [...fixedHeaders, ...dateHeaders];
   }
@@ -233,7 +241,8 @@ export class GanttService {
   private createRowBackground(
     ticket: Ticket,
     dateRange: Date[],
-    isParent: boolean
+    isParent: boolean,
+    holidays: Date[] = []
   ): string[] {
     const settings = this.settingsRepository.getSettings();
     const backgrounds: string[] = [];
@@ -250,12 +259,14 @@ export class GanttService {
       const strippedDate = DateUtils.stripTime(date);
       const isInRange = this.isDateInRange(strippedDate, ticket);
       const isToday = strippedDate.getTime() === today.getTime();
-      const isWeekend = DateUtils.isWeekend(strippedDate);
+      const isSunday = DateUtils.isSunday(strippedDate);
+      const isSaturday = DateUtils.isSaturday(strippedDate);
+      const isHoliday = HolidayService.isHoliday(strippedDate, holidays);
 
       let bgColor = '#FFFFFF';
 
       if (isInRange) {
-        // チケット期間内
+        // チケット期間内（最優先）
         bgColor = this.settingsRepository.getTicketColor(
           isParent,
           STATUS_LABELS[ticket.status]
@@ -263,9 +274,15 @@ export class GanttService {
       } else if (isToday) {
         // 今日の日付（チケット期間外）
         bgColor = settings.todayColor;
-      } else if (isWeekend) {
-        // 週末（チケット期間外）
-        bgColor = settings.weekendColor;
+      } else if (isHoliday) {
+        // 祝日（チケット期間外）
+        bgColor = settings.holidayColor;
+      } else if (isSunday) {
+        // 日曜日（チケット期間外）
+        bgColor = settings.sundayColor;
+      } else if (isSaturday) {
+        // 土曜日（チケット期間外）
+        bgColor = settings.saturdayColor;
       }
 
       backgrounds.push(bgColor);
@@ -315,7 +332,8 @@ export class GanttService {
   private ticketToGanttRow(
     ticket: Ticket,
     parentName: string,
-    dateRange: Date[]
+    dateRange: Date[],
+    holidays: Date[] = []
   ): GanttRow {
     const isParent = ticket.type === 'parent';
 
@@ -328,7 +346,7 @@ export class GanttService {
       startDate: ticket.startDate,
       endDate: ticket.endDate,
       dateCells: this.createDateCells(ticket, dateRange),
-      backgroundColors: this.createRowBackground(ticket, dateRange, isParent),
+      backgroundColors: this.createRowBackground(ticket, dateRange, isParent, holidays),
     };
   }
 }

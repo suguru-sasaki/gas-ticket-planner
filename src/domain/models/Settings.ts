@@ -12,8 +12,12 @@ export interface GanttSettings {
   childColorCompleted: string;
   /** 今日の日付色 */
   todayColor: string;
-  /** 週末色 */
-  weekendColor: string;
+  /** 土曜日色（青系） */
+  saturdayColor: string;
+  /** 日曜日色（赤系） */
+  sundayColor: string;
+  /** 祝日色（赤系） */
+  holidayColor: string;
   /** ヘッダ背景色 */
   headerBackgroundColor: string;
 }
@@ -27,7 +31,9 @@ export const DEFAULT_SETTINGS: GanttSettings = {
   childColorInProgress: '#FFC107',
   childColorCompleted: '#4CAF50',
   todayColor: '#FFEB3B',
-  weekendColor: '#F5F5F5',
+  saturdayColor: '#BBDEFB',
+  sundayColor: '#FFCDD2',
+  holidayColor: '#FFCDD2',
   headerBackgroundColor: '#E3F2FD',
 };
 
@@ -40,7 +46,9 @@ export const SETTING_KEY_MAP: Record<keyof GanttSettings, string> = {
   childColorInProgress: '子チケット色_進行中',
   childColorCompleted: '子チケット色_完了',
   todayColor: '今日の日付色',
-  weekendColor: '週末色',
+  saturdayColor: '土曜日色',
+  sundayColor: '日曜日色',
+  holidayColor: '祝日色',
   headerBackgroundColor: 'ヘッダ背景色',
 };
 
@@ -53,7 +61,9 @@ export const SETTING_LABEL_TO_KEY: Record<string, keyof GanttSettings> = {
   子チケット色_進行中: 'childColorInProgress',
   子チケット色_完了: 'childColorCompleted',
   今日の日付色: 'todayColor',
-  週末色: 'weekendColor',
+  土曜日色: 'saturdayColor',
+  日曜日色: 'sundayColor',
+  祝日色: 'holidayColor',
   ヘッダ背景色: 'headerBackgroundColor',
 };
 
@@ -66,6 +76,8 @@ export const SETTING_KEYS = {
   childColorInProgress: '子チケット色_進行中',
   childColorCompleted: '子チケット色_完了',
   todayColor: '今日の日付色',
-  weekendColor: '週末色',
+  saturdayColor: '土曜日色',
+  sundayColor: '日曜日色',
+  holidayColor: '祝日色',
   headerBackgroundColor: 'ヘッダ背景色',
 } as const;
