@@ -416,7 +416,7 @@ function generateGantt(params: {
 
     // 日付列の幅
     for (let i = 8; i <= ganttData.headers.length; i++) {
-      sheet.setColumnWidth(i, 45);
+      sheet.setColumnWidth(i, 40);
     }
 
     // シートをアクティブ化
