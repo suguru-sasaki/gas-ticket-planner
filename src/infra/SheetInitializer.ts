@@ -128,11 +128,5 @@ export class SheetInitializer {
     sheet.setFrozenRows(1);
     sheet.setColumnWidth(1, 180);
     sheet.setColumnWidth(2, 120);
-
-    // 色プレビュー（設定値セルの背景色を設定）
-    for (let i = 0; i < settingsData.length; i++) {
-      const color = settingsData[i][1] as string;
-      sheet.getRange(i + 2, 2).setBackground(color);
-    }
   }
 }
