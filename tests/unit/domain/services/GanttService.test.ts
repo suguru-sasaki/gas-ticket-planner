@@ -1,38 +1,59 @@
-import { GanttService } from '../../../../src/domain/services/GanttService';
-import { TicketRepository } from '../../../../src/infra/repositories/TicketRepository';
+import { GanttService, IGanttTicketRepository } from '../../../../src/domain/services/GanttService';
 import { SettingsRepository } from '../../../../src/infra/repositories/SettingsRepository';
 import { MockSpreadsheetWrapper } from '../../../helpers/MockSpreadsheet';
+import { Ticket } from '../../../../src/domain/models/Ticket';
 
 describe('GanttService', () => {
   let mockSpreadsheet: MockSpreadsheetWrapper;
-  let ticketRepository: TicketRepository;
+  let mockTicketRepository: IGanttTicketRepository;
   let settingsRepository: SettingsRepository;
   let service: GanttService;
+  let tickets: Ticket[];
 
-  const setupSheets = (tickets: unknown[][] = [], settings: unknown[][] = []) => {
-    mockSpreadsheet.addSheet('チケット管理', [
-      [
-        'チケットID',
-        '親チケットID',
-        'チケット種別',
-        'チケット名',
-        '説明文',
-        '担当者',
-        '状態',
-        '開始日',
-        '終了日',
-        '作成日時',
-      ],
-      ...tickets,
-    ]);
+  const createTicket = (
+    id: string,
+    parentId: string | null,
+    type: 'parent' | 'child',
+    name: string,
+    description: string,
+    assignee: string,
+    status: 'notStarted' | 'inProgress' | 'completed',
+    startDate: Date,
+    endDate: Date
+  ): Ticket => ({
+    id,
+    parentId,
+    type,
+    name,
+    description,
+    assignee,
+    status,
+    startDate,
+    endDate,
+    createdAt: new Date('2024-01-09'),
+  });
+
+  const setupService = (ticketData: Ticket[] = [], settings: unknown[][] = []) => {
+    tickets = ticketData;
+
+    // IGanttTicketRepositoryのモック
+    mockTicketRepository = {
+      findParentsInPeriod: (start: Date, end: Date) =>
+        tickets.filter((t) => {
+          if (t.type !== 'parent') return false;
+          return t.startDate <= end && t.endDate >= start;
+        }),
+      findChildren: (parentId: string) =>
+        tickets.filter((t) => t.parentId === parentId),
+    };
+
     mockSpreadsheet.addSheet('可視化設定', [
       ['設定名', '設定値'],
       ...settings,
     ]);
 
-    ticketRepository = new TicketRepository(mockSpreadsheet);
     settingsRepository = new SettingsRepository(mockSpreadsheet);
-    service = new GanttService(ticketRepository, settingsRepository);
+    service = new GanttService(mockTicketRepository, settingsRepository);
   };
 
   beforeEach(() => {
@@ -41,32 +62,30 @@ describe('GanttService', () => {
 
   describe('generateGantt', () => {
     it('ガントチャートデータを生成できる', () => {
-      setupSheets(
+      setupService(
         [
-          [
+          createTicket(
             'T-001',
-            '',
-            '親',
+            null,
+            'parent',
             '機能A',
             '// メモ\n説明',
             '山田太郎',
-            '未着手',
+            'notStarted',
             new Date('2024-01-10'),
-            new Date('2024-01-12'),
-            new Date('2024-01-09'),
-          ],
-          [
+            new Date('2024-01-12')
+          ),
+          createTicket(
             'T-002',
             'T-001',
-            '子',
+            'child',
             '設計',
             '// 設計メモ\n詳細',
             '山田太郎',
-            '進行中',
+            'inProgress',
             new Date('2024-01-10'),
-            new Date('2024-01-11'),
-            new Date('2024-01-09'),
-          ],
+            new Date('2024-01-11')
+          ),
         ],
         [
           ['親チケット色', '#4285F4'],
@@ -110,20 +129,19 @@ describe('GanttService', () => {
     });
 
     it('期間外のチケットは含まれない', () => {
-      setupSheets(
+      setupService(
         [
-          [
+          createTicket(
             'T-001',
-            '',
-            '親',
+            null,
+            'parent',
             '機能A',
             '',
             '山田太郎',
-            '未着手',
+            'notStarted',
             new Date('2024-02-01'),
-            new Date('2024-02-10'),
-            new Date('2024-01-09'),
-          ],
+            new Date('2024-02-10')
+          ),
         ],
         []
       );
@@ -137,20 +155,19 @@ describe('GanttService', () => {
     });
 
     it('期間と一部重なるチケットは含まれる', () => {
-      setupSheets(
+      setupService(
         [
-          [
+          createTicket(
             'T-001',
-            '',
-            '親',
+            null,
+            'parent',
             '機能A',
             '',
             '山田太郎',
-            '未着手',
+            'notStarted',
             new Date('2024-01-25'),
-            new Date('2024-02-05'),
-            new Date('2024-01-09'),
-          ],
+            new Date('2024-02-05')
+          ),
         ],
         []
       );
@@ -164,60 +181,56 @@ describe('GanttService', () => {
     });
 
     it('複数の親チケットと子チケットを正しく展開する', () => {
-      setupSheets(
+      setupService(
         [
           // 親チケット1
-          [
+          createTicket(
             'T-001',
-            '',
-            '親',
+            null,
+            'parent',
             '機能A',
             '',
             '山田太郎',
-            '未着手',
+            'notStarted',
             new Date('2024-01-10'),
-            new Date('2024-01-15'),
-            new Date('2024-01-09'),
-          ],
+            new Date('2024-01-15')
+          ),
           // 親チケット1の子
-          [
+          createTicket(
             'T-002',
             'T-001',
-            '子',
+            'child',
             '設計A',
             '',
             '山田太郎',
-            '未着手',
+            'notStarted',
             new Date('2024-01-10'),
-            new Date('2024-01-12'),
-            new Date('2024-01-09'),
-          ],
+            new Date('2024-01-12')
+          ),
           // 親チケット2
-          [
+          createTicket(
             'T-003',
-            '',
-            '親',
+            null,
+            'parent',
             '機能B',
             '',
             '鈴木花子',
-            '進行中',
+            'inProgress',
             new Date('2024-01-12'),
-            new Date('2024-01-18'),
-            new Date('2024-01-09'),
-          ],
+            new Date('2024-01-18')
+          ),
           // 親チケット2の子
-          [
+          createTicket(
             'T-004',
             'T-003',
-            '子',
+            'child',
             '設計B',
             '',
             '鈴木花子',
-            '進行中',
+            'inProgress',
             new Date('2024-01-12'),
-            new Date('2024-01-14'),
-            new Date('2024-01-09'),
-          ],
+            new Date('2024-01-14')
+          ),
         ],
         []
       );
@@ -242,20 +255,19 @@ describe('GanttService', () => {
     });
 
     it('日付範囲が正しく生成される', () => {
-      setupSheets(
+      setupService(
         [
-          [
+          createTicket(
             'T-001',
-            '',
-            '親',
+            null,
+            'parent',
             '機能A',
             '',
             '山田太郎',
-            '未着手',
+            'notStarted',
             new Date('2024-01-10'),
-            new Date('2024-01-12'),
-            new Date('2024-01-09'),
-          ],
+            new Date('2024-01-12')
+          ),
         ],
         []
       );
@@ -274,32 +286,30 @@ describe('GanttService', () => {
 
   describe('generateGanttRows', () => {
     it('GanttRowモデルの配列を生成できる', () => {
-      setupSheets(
+      setupService(
         [
-          [
+          createTicket(
             'T-001',
-            '',
-            '親',
+            null,
+            'parent',
             '機能A',
             '// メモ\n説明',
             '山田太郎',
-            '未着手',
+            'notStarted',
             new Date('2024-01-10'),
-            new Date('2024-01-12'),
-            new Date('2024-01-09'),
-          ],
-          [
+            new Date('2024-01-12')
+          ),
+          createTicket(
             'T-002',
             'T-001',
-            '子',
+            'child',
             '設計',
             '',
             '山田太郎',
-            '進行中',
+            'inProgress',
             new Date('2024-01-10'),
-            new Date('2024-01-11'),
-            new Date('2024-01-09'),
-          ],
+            new Date('2024-01-11')
+          ),
         ],
         []
       );
@@ -327,20 +337,19 @@ describe('GanttService', () => {
     it('チケット期間内の日付に色が適用される', () => {
       // 親チケット: 1/10〜1/14（5日間）
       // ガント表示範囲も親のmin/maxから計算されるので 1/10〜1/14
-      setupSheets(
+      setupService(
         [
-          [
+          createTicket(
             'T-001',
-            '',
-            '親',
+            null,
+            'parent',
             '機能A',
             '',
             '山田太郎',
-            '未着手',
+            'notStarted',
             new Date('2024-01-10'),
-            new Date('2024-01-14'),
-            new Date('2024-01-09'),
-          ],
+            new Date('2024-01-14')
+          ),
         ],
         [['親チケット色', '#4285F4']]
       );
@@ -362,32 +371,30 @@ describe('GanttService', () => {
     });
 
     it('子チケットは状態に応じた色が適用される', () => {
-      setupSheets(
+      setupService(
         [
-          [
+          createTicket(
             'T-001',
-            '',
-            '親',
+            null,
+            'parent',
             '機能A',
             '',
             '山田太郎',
-            '未着手',
+            'notStarted',
             new Date('2024-01-10'),
-            new Date('2024-01-12'),
-            new Date('2024-01-09'),
-          ],
-          [
+            new Date('2024-01-12')
+          ),
+          createTicket(
             'T-002',
             'T-001',
-            '子',
+            'child',
             '設計',
             '',
             '山田太郎',
-            '進行中',
+            'inProgress',
             new Date('2024-01-10'),
-            new Date('2024-01-10'),
-            new Date('2024-01-09'),
-          ],
+            new Date('2024-01-10')
+          ),
         ],
         [
           ['子チケット色_未着手', '#E0E0E0'],

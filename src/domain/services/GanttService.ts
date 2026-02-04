@@ -1,10 +1,19 @@
 import { SettingsRepository } from '../../infra/repositories/SettingsRepository';
-import { TicketRepository } from '../../infra/repositories/TicketRepository';
 import { STATUS_LABELS } from '../../types';
 import { GanttRow } from '../models/GanttRow';
 import { Ticket } from '../models/Ticket';
 import { DateUtils } from '../utils/DateUtils';
 import { MemoExtractor } from '../utils/MemoExtractor';
+
+/**
+ * ガントサービスが必要とするチケットリポジトリのインターフェース
+ */
+export interface IGanttTicketRepository {
+  /** 期間内の親チケットを取得 */
+  findParentsInPeriod(startDate: Date, endDate: Date): Ticket[];
+  /** 親チケットIDから子チケットを取得 */
+  findChildren(parentId: string): Ticket[];
+}
 
 /**
  * ガント生成入力
@@ -58,7 +67,7 @@ export interface GanttRowData {
  */
 export class GanttService {
   constructor(
-    private ticketRepository: TicketRepository,
+    private ticketRepository: IGanttTicketRepository,
     private settingsRepository: SettingsRepository
   ) {}
 

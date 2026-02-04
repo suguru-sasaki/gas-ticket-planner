@@ -133,22 +133,17 @@
 
 ### 3.2 リポジトリ層
 
-- [x] TicketRepository
-  - [x] findAll()
-  - [x] findByParentId()
-  - [x] saveAll()
-  - [x] getNextId()
-
 - [x] TemplateRepository
   - [x] findAll()
-
-- [x] AssigneeRepository
-  - [x] findAll()
-  - [x] findByName()
 
 - [x] SettingsRepository
   - [x] getSettings()
   - [x] resetToDefault()
+
+- [x] BacklogRepository
+  - [x] getAssignees()
+  - [x] createTicketsFromTemplate()
+  - [x] findParentTicketsInRange()
 
 ---
 
@@ -192,14 +187,6 @@
 - [x] Settings型定義
 
 ### 4.3 サービス
-
-- [x] TemplateService
-  - [x] expandChildTickets()
-  - [x] 単体テスト
-
-- [x] TicketService
-  - [x] saveTickets()
-  - [x] 単体テスト
 
 - [x] GanttService
   - [x] generateGantt()
@@ -376,9 +363,10 @@
 
 1. 結合テスト戦略: モックSpreadsheetを採用（理由: CI/CD統合、高速実行）
 2. 設定保存先: 可視化設定シートを採用（理由: ユーザー編集可能）
-3. チケットID形式: T-XXX（3桁以上、ゼロパディング）
+3. チケットID形式: BacklogのissueKeyを使用
 4. ビルドツール: esbuild採用（理由: GAS用IIFE形式バンドル、高速ビルド）
-5. シート順序: 使い方 | 担当者リスト | テンプレート | 可視化設定 | チケット管理
+5. シート順序: 使い方 | テンプレート | 可視化設定
+6. スタンドアロンモード削除: Backlog連携を必須とし、担当者リスト・チケット管理シートを廃止
 
 ---
 
@@ -392,3 +380,4 @@
 | 2026-02-04 | Phase 4単体テスト完了（Validator追加）、Phase 6結合テスト完了（198テスト通過） |
 | 2026-02-04 | Phase 7 E2Eテスト完了（8項目すべてPASS）、開発環境検証完了 |
 | 2026-02-04 | Backlog連携実装完了、開発環境デプロイ完了 |
+| 2026-02-04 | スタンドアロンモード削除（担当者リスト・チケット管理シート廃止）、Backlog連携必須化 |

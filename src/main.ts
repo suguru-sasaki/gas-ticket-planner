@@ -10,13 +10,9 @@
 
 import { SpreadsheetWrapperImpl } from './infra/SpreadsheetWrapper';
 import { SheetInitializer } from './infra/SheetInitializer';
-import { AssigneeRepository } from './infra/repositories/AssigneeRepository';
 import { TemplateRepository } from './infra/repositories/TemplateRepository';
-import { TicketRepository } from './infra/repositories/TicketRepository';
 import { SettingsRepository } from './infra/repositories/SettingsRepository';
-import { TemplateService } from './domain/services/TemplateService';
-import { TicketService } from './domain/services/TicketService';
-import { GanttService } from './domain/services/GanttService';
+import { GanttService, IGanttTicketRepository } from './domain/services/GanttService';
 import { DateUtils } from './domain/utils/DateUtils';
 import { AppError } from './errors/AppError';
 import {
@@ -36,36 +32,12 @@ function getSpreadsheetWrapper(): SpreadsheetWrapperImpl {
   return new SpreadsheetWrapperImpl();
 }
 
-function getAssigneeRepository(): AssigneeRepository {
-  return new AssigneeRepository(getSpreadsheetWrapper());
-}
-
 function getTemplateRepository(): TemplateRepository {
   return new TemplateRepository(getSpreadsheetWrapper());
 }
 
-function getTicketRepository(): TicketRepository {
-  return new TicketRepository(getSpreadsheetWrapper());
-}
-
 function getSettingsRepository(): SettingsRepository {
   return new SettingsRepository(getSpreadsheetWrapper());
-}
-
-function getTemplateService(): TemplateService {
-  return new TemplateService(
-    getTemplateRepository(),
-    getTicketRepository(),
-    getAssigneeRepository()
-  );
-}
-
-function getTicketService(): TicketService {
-  return new TicketService(getTicketRepository(), getAssigneeRepository());
-}
-
-function getGanttService(): GanttService {
-  return new GanttService(getTicketRepository(), getSettingsRepository());
 }
 
 // ============================================================
@@ -188,25 +160,17 @@ function showBacklogSettingsDialog(): void {
 // ============================================================
 
 /**
- * 担当者リストを取得
- * Backlog設定がある場合はBacklogから、なければスプレッドシートから取得
+ * 担当者リストを取得（Backlogから）
  * @returns 担当者の配列
  */
 function getAssigneeList(): { name: string; email: string }[] {
-  // Backlog設定がある場合はBacklogから取得
   const backlogConfig = getBacklogConfigFromProperties();
-  if (backlogConfig) {
-    try {
-      const backlogRepo = new BacklogRepository(backlogConfig);
-      return backlogRepo.getAssignees();
-    } catch {
-      // Backlog接続エラーの場合はスプレッドシートにフォールバック
-    }
+  if (!backlogConfig) {
+    throw new AppError('E110', 'Backlog設定が必要です。「チケット管理」→「Backlog設定」から設定してください');
   }
 
-  // スプレッドシートから取得
-  const assigneeRepo = getAssigneeRepository();
-  return assigneeRepo.findAll();
+  const backlogRepo = new BacklogRepository(backlogConfig);
+  return backlogRepo.getAssignees();
 }
 
 // ============================================================
@@ -264,8 +228,7 @@ function isBacklogConfigured(): boolean {
 }
 
 /**
- * チケットを作成
- * Backlog設定がある場合はBacklogに、なければスプレッドシートに作成
+ * チケットを作成（Backlogに作成）
  * @param formData フォームデータ
  * @returns 作成結果
  */
@@ -277,6 +240,12 @@ function createTicket(formData: {
   endDate: string;
 }): { success: boolean; ticketCount?: number; issueKey?: string; error?: string } {
   try {
+    // Backlog設定を確認
+    const backlogConfig = getBacklogConfigFromProperties();
+    if (!backlogConfig) {
+      return { success: false, error: 'Backlog設定が必要です。「チケット管理」→「Backlog設定」から設定してください' };
+    }
+
     // 日付をパース
     const startDate = DateUtils.parseDate(formData.startDate);
     const endDate = DateUtils.parseDate(formData.endDate);
@@ -286,14 +255,7 @@ function createTicket(formData: {
       return { success: false, error: '開始日は終了日以前である必要があります' };
     }
 
-    // Backlog設定がある場合はBacklogに作成
-    const backlogConfig = getBacklogConfigFromProperties();
-    if (backlogConfig) {
-      return createTicketToBacklog(formData, startDate, endDate, backlogConfig);
-    }
-
-    // スプレッドシートに作成（スタンドアロン版）
-    return createTicketToSpreadsheet(formData, startDate, endDate);
+    return createTicketToBacklog(formData, startDate, endDate, backlogConfig);
   } catch (error) {
     const message =
       error instanceof AppError
@@ -357,45 +319,7 @@ function createTicketToBacklog(
 }
 
 /**
- * スプレッドシートにチケットを作成（スタンドアロン版）
- */
-function createTicketToSpreadsheet(
-  formData: {
-    parentName: string;
-    parentDescription: string;
-    assignee: string;
-  },
-  startDate: Date,
-  endDate: Date
-): { success: boolean; ticketCount?: number; error?: string } {
-  const templateService = getTemplateService();
-  const ticketService = getTicketService();
-
-  // テンプレートから展開
-  const result = templateService.expandChildTickets({
-    parentName: formData.parentName,
-    parentDescription: formData.parentDescription,
-    assignee: formData.assignee,
-    startDate,
-    endDate,
-  });
-
-  // 保存
-  ticketService.saveTickets([result.parent, ...result.children]);
-
-  const ticketCount = 1 + result.children.length;
-  SpreadsheetApp.getActiveSpreadsheet().toast(
-    `${ticketCount}件のチケットを作成しました（スタンドアロン版）`,
-    '作成完了',
-    3
-  );
-
-  return { success: true, ticketCount };
-}
-
-/**
- * ガントを生成
- * Backlog設定がある場合はBacklogから、なければスプレッドシートからデータを取得
+ * ガントを生成（Backlogからデータ取得）
  * @param params 生成パラメータ
  * @returns 生成結果
  */
@@ -404,6 +328,12 @@ function generateGantt(params: {
   endDate: string;
 }): { success: boolean; sheetName?: string; error?: string } {
   try {
+    // Backlog設定を確認
+    const backlogConfig = getBacklogConfigFromProperties();
+    if (!backlogConfig) {
+      return { success: false, error: 'Backlog設定が必要です。「チケット管理」→「Backlog設定」から設定してください' };
+    }
+
     const settingsRepo = getSettingsRepository();
 
     // 日付をパース
@@ -415,17 +345,8 @@ function generateGantt(params: {
       return { success: false, error: '開始日は終了日以前である必要があります' };
     }
 
-    // Backlog設定がある場合はBacklogからデータ取得
-    const backlogConfig = getBacklogConfigFromProperties();
-    let ganttData;
-
-    if (backlogConfig) {
-      ganttData = generateGanttFromBacklog(startDate, endDate, backlogConfig);
-    } else {
-      // スプレッドシートからデータ取得
-      const ganttService = getGanttService();
-      ganttData = ganttService.generateGantt({ startDate, endDate });
-    }
+    // Backlogからデータ取得
+    const ganttData = generateGanttFromBacklog(startDate, endDate, backlogConfig);
 
     if (ganttData.rows.length === 0) {
       return { success: false, error: '対象となるチケットがありません' };
@@ -496,9 +417,8 @@ function generateGantt(params: {
     // シートをアクティブ化
     sheet.activate();
 
-    const source = backlogConfig ? 'Backlog' : 'スプレッドシート';
     SpreadsheetApp.getActiveSpreadsheet().toast(
-      `ガントチャートを生成しました（${source}）: ${sheetName}`,
+      `ガントチャートを生成しました: ${sheetName}`,
       '生成完了',
       3
     );
@@ -549,7 +469,7 @@ function generateGanttFromBacklog(
 
   // GanttServiceを使ってガントデータを生成
   const ganttService = new GanttService(
-    mockTicketRepo as unknown as TicketRepository,
+    mockTicketRepo as IGanttTicketRepository,
     settingsRepo
   );
 

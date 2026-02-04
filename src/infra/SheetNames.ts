@@ -5,12 +5,8 @@
 export const SHEET_NAMES = {
   /** 使い方説明シート */
   USAGE: '使い方',
-  /** 担当者リストシート */
-  ASSIGNEES: '担当者リスト',
   /** テンプレートシート */
   TEMPLATES: 'テンプレート',
-  /** チケット管理シート */
-  TICKETS: 'チケット管理',
   /** 可視化設定シート */
   SETTINGS: '可視化設定',
 } as const;
@@ -35,22 +31,6 @@ export function generateGanttSheetName(date: Date = new Date()): string {
 
   return `${GANTT_SHEET_PREFIX}${year}${month}${day}_${hours}${minutes}${seconds}`;
 }
-
-/**
- * チケット管理シートのカラムインデックス（0始まり）
- */
-export const TICKET_COLUMNS = {
-  ID: 0,
-  PARENT_ID: 1,
-  TYPE: 2,
-  NAME: 3,
-  DESCRIPTION: 4,
-  ASSIGNEE: 5,
-  STATUS: 6,
-  START_DATE: 7,
-  END_DATE: 8,
-  CREATED_AT: 9,
-} as const;
 
 /**
  * ガントシートの固定列数（親チケット名〜終了日）

@@ -2,17 +2,13 @@
 
 ## 0. 設計コンセプト
 
-### 0.1 本来の運用形態
+### 0.1 運用形態
 
-本システムは**Backlog連携によるガントチャート可視化**を本来の運用形態として設計しています。
+本システムは**Backlog連携によるガントチャート可視化**を目的として設計しています。
 
-- **チケット管理**: Backlog上で行う（スプレッドシートには保存しない）
+- **チケット管理**: Backlog上で行う
 - **スプレッドシートの役割**: ガントチャート可視化専用
 - **テンプレート**: Backlogへのチケット作成時に子チケット構造を定義
-
-### 0.2 スタンドアロン版（現在の実装）
-
-Backlog連携実装前の暫定機能として、スプレッドシート内でチケットを管理するスタンドアロン版を提供しています。これはテスト・デモ用途であり、本番運用ではBacklog連携版を使用します。
 
 ---
 
@@ -43,10 +39,9 @@ Backlog連携実装前の暫定機能として、スプレッドシート内で�
                             ▼
 ┌─────────────────────────────────────────────────────────┐
 │                     Domain Layer                         │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │  Ticket     │  │  Gantt      │  │  Template   │     │
-│  │  Service    │  │  Service    │  │  Service    │     │
-│  └─────────────┘  └─────────────┘  └─────────────┘     │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │                  GanttService                   │   │
+│  └─────────────────────────────────────────────────┘   │
 │                                                         │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │                    Utilities                     │   │
@@ -58,15 +53,14 @@ Backlog連携実装前の暫定機能として、スプレッドシート内で�
 ┌─────────────────────────────────────────────────────────┐
 │                 Infrastructure Layer                     │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │              SheetRepository                     │   │
-│  │  - TicketRepository                             │   │
-│  │  - TemplateRepository                           │   │
-│  │  - AssigneeRepository                           │   │
-│  │  - SettingsRepository                           │   │
+│  │              Repository                          │   │
+│  │  - TemplateRepository (シート)                  │   │
+│  │  - SettingsRepository (シート)                  │   │
+│  │  - BacklogRepository (Backlog API)              │   │
 │  └─────────────────────────────────────────────────┘   │
 │                                                         │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │           SpreadsheetWrapper (DI用)             │   │
+│  │       SpreadsheetWrapper / BacklogClient        │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -87,10 +81,6 @@ Backlog連携実装前の暫定機能として、スプレッドシート内で�
 ```
 src/
 ├── main.ts                    # エントリポイント（onOpen、グローバル関数）
-├── ui/
-│   ├── MenuController.ts      # メニュー制御
-│   ├── UiController.ts        # UI操作のハンドラ
-│   └── DialogService.ts       # ダイアログ表示サービス
 ├── domain/
 │   ├── models/
 │   │   ├── Ticket.ts          # チケットモデル
@@ -99,9 +89,7 @@ src/
 │   │   ├── GanttRow.ts        # ガント行モデル
 │   │   └── Settings.ts        # 設定モデル
 │   ├── services/
-│   │   ├── TicketService.ts   # チケット作成ロジック
-│   │   ├── GanttService.ts    # ガント生成ロジック
-│   │   └── TemplateService.ts # テンプレート展開ロジック
+│   │   └── GanttService.ts    # ガント生成ロジック
 │   └── utils/
 │       ├── DateUtils.ts       # 日付計算ユーティリティ
 │       ├── MemoExtractor.ts   # メモ抽出ユーティリティ
@@ -109,12 +97,16 @@ src/
 │       └── Validator.ts       # バリデーションユーティリティ
 ├── infra/
 │   ├── SpreadsheetWrapper.ts  # SpreadsheetAppのラッパー（DI用）
+│   ├── SheetInitializer.ts    # シート自動初期化
+│   ├── SheetNames.ts          # シート名定数
 │   ├── repositories/
-│   │   ├── TicketRepository.ts
 │   │   ├── TemplateRepository.ts
-│   │   ├── AssigneeRepository.ts
 │   │   └── SettingsRepository.ts
-│   └── SheetNames.ts          # シート名定数
+│   └── backlog/
+│       ├── index.ts           # Backlog関連エクスポート
+│       ├── BacklogConfig.ts   # Backlog設定管理
+│       ├── BacklogClient.ts   # Backlog APIクライアント
+│       └── BacklogRepository.ts # Backlogデータアクセス
 ├── errors/
 │   └── AppError.ts            # アプリケーションエラー定義
 └── types/
@@ -122,19 +114,24 @@ src/
 
 html/
 ├── create-ticket.html         # チケット作成フォーム
-└── gantt-dialog.html          # ガント生成ダイアログ
+├── gantt-dialog.html          # ガント生成ダイアログ
+└── backlog-settings.html      # Backlog設定ダイアログ
 
 tests/
 ├── unit/
 │   ├── domain/
-│   │   ├── DateUtils.test.ts
-│   │   ├── MemoExtractor.test.ts
-│   │   ├── TicketService.test.ts
-│   │   └── GanttService.test.ts
+│   │   ├── utils/
+│   │   │   ├── DateUtils.test.ts
+│   │   │   ├── MemoExtractor.test.ts
+│   │   │   └── Validator.test.ts
+│   │   └── services/
+│   │       └── GanttService.test.ts
 │   └── infra/
 │       └── repositories/
-└── integration/
-    └── GanttGeneration.test.ts
+│           ├── TemplateRepository.test.ts
+│           └── SettingsRepository.test.ts
+└── helpers/
+    └── MockSpreadsheet.ts     # テスト用モックスプレッドシート
 ```
 
 ### 2.2 各モジュールの責務
@@ -151,9 +148,7 @@ tests/
 
 | モジュール | 責務 |
 |-----------|------|
-| TicketService | 親子チケット作成のビジネスロジック |
 | GanttService | ガント用データ生成（色、行列構成） |
-| TemplateService | テンプレートからの子チケット展開 |
 | DateUtils | 日付計算（相対日、範囲生成、曜日判定） |
 | MemoExtractor | 説明文からのメモ抽出 |
 | IdGenerator | チケットID採番 |
@@ -164,10 +159,10 @@ tests/
 | モジュール | 責務 |
 |-----------|------|
 | SpreadsheetWrapper | SpreadsheetAppの薄いラッパー（テスト時モック差し替え用） |
-| TicketRepository | チケット管理シートのCRUD |
 | TemplateRepository | テンプレートシートの読み取り |
-| AssigneeRepository | 担当者リストシートの読み取り |
 | SettingsRepository | 可視化設定シートの読み書き |
+| BacklogClient | Backlog REST APIクライアント |
+| BacklogRepository | Backlogデータアクセス（チケット取得・作成） |
 
 ---
 

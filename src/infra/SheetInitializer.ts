@@ -16,14 +16,12 @@ export class SheetInitializer {
   /**
    * 全シートを初期化
    * 存在しないシートのみ作成する
-   * シート順序: 使い方 | 担当者リスト | テンプレート | 可視化設定 | チケット管理
+   * シート順序: 使い方 | テンプレート | 可視化設定
    */
   initializeAllSheets(): void {
     this.initializeUsageSheet();
-    this.initializeAssigneeSheet();
     this.initializeTemplateSheet();
     this.initializeSettingsSheet();
-    this.initializeTicketSheet();
   }
 
   /**
@@ -31,8 +29,8 @@ export class SheetInitializer {
    */
   needsInitialization(): boolean {
     const ss = this.spreadsheet.getActiveSpreadsheet();
-    // チケット管理シートが存在しない場合は初期化が必要
-    return ss.getSheetByName(SHEET_NAMES.TICKETS) === null;
+    // テンプレートシートが存在しない場合は初期化が必要
+    return ss.getSheetByName(SHEET_NAMES.TEMPLATES) === null;
   }
 
   /**
@@ -47,23 +45,23 @@ export class SheetInitializer {
       ['GAS Ticket Planner - 使い方'],
       [''],
       ['■ 概要'],
-      ['このツールは、親子チケットの作成とガントチャート可視化を行います。'],
+      ['このツールは、Backlog連携による親子チケットの作成とガントチャート可視化を行います。'],
       [''],
-      ['■ シート説明（左から順）'],
+      ['■ シート説明'],
       ['・使い方: このシート（操作説明）'],
-      ['・担当者リスト: チケットの担当者候補を管理'],
       ['・テンプレート: 子チケットのテンプレートを管理'],
       ['・可視化設定: ガントチャートの色設定'],
-      ['・チケット管理: 作成されたチケットデータ（自動管理）'],
+      [''],
+      ['■ 初期設定'],
+      ['1. メニュー「チケット管理」→「Backlog設定...」でBacklog接続を設定'],
+      ['2. テンプレートに子チケットのパターンを設定'],
       [''],
       ['■ 操作方法'],
-      ['1. 担当者リストに担当者を追加'],
-      ['2. テンプレートに子チケットのパターンを設定'],
-      ['3. メニュー「チケット管理」→「チケット作成...」で親子チケットを作成'],
-      ['4. メニュー「チケット管理」→「ガント生成...」でガントチャートを生成'],
+      ['1. メニュー「チケット管理」→「チケット作成...」でBacklogにチケットを作成'],
+      ['2. メニュー「チケット管理」→「ガント生成...」でガントチャートを生成'],
       [''],
       ['■ 注意事項'],
-      ['・チケット管理シートは直接編集しないでください'],
+      ['・Backlog設定が必要です（APIキー、プロジェクトIDなど）'],
       ['・ガントシートは生成のたびに新規作成されます（右側に追加）'],
     ];
 
@@ -71,23 +69,6 @@ export class SheetInitializer {
     sheet.setColumnWidth(1, 600);
     sheet.getRange(1, 1).setFontWeight('bold').setFontSize(14);
     sheet.setFrozenRows(1);
-  }
-
-  /**
-   * 担当者リストシートを初期化
-   */
-  private initializeAssigneeSheet(): void {
-    const ss = this.spreadsheet.getActiveSpreadsheet();
-    if (ss.getSheetByName(SHEET_NAMES.ASSIGNEES)) return;
-
-    const sheet = ss.insertSheet(SHEET_NAMES.ASSIGNEES);
-    const headers = [['担当者名', 'メールアドレス']];
-
-    sheet.getRange(1, 1, 1, 2).setValues(headers);
-    sheet.getRange(1, 1, 1, 2).setFontWeight('bold').setBackground('#E3F2FD');
-    sheet.setFrozenRows(1);
-    sheet.setColumnWidth(1, 150);
-    sheet.setColumnWidth(2, 250);
   }
 
   /**
@@ -117,45 +98,6 @@ export class SheetInitializer {
     sheet.setColumnWidth(2, 300);
     sheet.setColumnWidth(3, 120);
     sheet.setColumnWidth(4, 100);
-  }
-
-  /**
-   * チケット管理シートを初期化
-   */
-  private initializeTicketSheet(): void {
-    const ss = this.spreadsheet.getActiveSpreadsheet();
-    if (ss.getSheetByName(SHEET_NAMES.TICKETS)) return;
-
-    const sheet = ss.insertSheet(SHEET_NAMES.TICKETS);
-    const headers = [
-      [
-        'チケットID',
-        '親チケットID',
-        'チケット種別',
-        'チケット名',
-        '説明文',
-        '担当者',
-        '状態',
-        '開始日',
-        '終了日',
-        '作成日時',
-      ],
-    ];
-
-    sheet.getRange(1, 1, 1, 10).setValues(headers);
-    sheet.getRange(1, 1, 1, 10).setFontWeight('bold').setBackground('#E3F2FD');
-    sheet.setFrozenRows(1);
-
-    // 列幅設定
-    const columnWidths = [100, 100, 80, 200, 300, 100, 80, 100, 100, 150];
-    columnWidths.forEach((width, index) => {
-      sheet.setColumnWidth(index + 1, width);
-    });
-
-    // 日付列のフォーマット（H列=8, I列=9: 日付、J列=10: 日時）
-    // 十分な行数（1000行）に対してフォーマットを設定
-    sheet.getRange(2, 8, 1000, 2).setNumberFormat('yyyy/mm/dd');
-    sheet.getRange(2, 10, 1000, 1).setNumberFormat('yyyy/mm/dd hh:mm:ss');
   }
 
   /**
