@@ -4,7 +4,6 @@ import { GanttRow } from '../models/GanttRow';
 import { Ticket } from '../models/Ticket';
 import { DateUtils } from '../utils/DateUtils';
 import { HolidayService } from '../utils/HolidayService';
-import { MemoExtractor } from '../utils/MemoExtractor';
 
 /**
  * ガントサービスが必要とするチケットリポジトリのインターフェース
@@ -24,6 +23,8 @@ export interface GenerateGanttInput {
   startDate: Date;
   /** 表示終了日 */
   endDate: Date;
+  /** 説明文を含めるか */
+  includeDescription?: boolean;
 }
 
 /**
@@ -40,6 +41,8 @@ export interface GenerateGanttResult {
   headerBackgrounds: string[];
   /** 日付範囲 */
   dateRange: Date[];
+  /** 説明文を含むか */
+  includeDescription: boolean;
 }
 
 /**
@@ -50,8 +53,8 @@ export interface GanttRowData {
   parentName: string;
   /** 子チケット名 */
   childName: string;
-  /** メモ */
-  memo: string;
+  /** 説明文 */
+  description: string;
   /** 担当者 */
   assignee: string;
   /** 状態 */
@@ -80,20 +83,26 @@ export class GanttService {
    * @returns ガント生成結果
    */
   generateGantt(input: GenerateGanttInput): GenerateGanttResult {
+    const includeDescription = input.includeDescription ?? false;
+
     // 対象チケットを取得（フィルタ期間内に重なる親チケット）
-    const parents = this.ticketRepository.findParentsInPeriod(
+    const parentsUnsorted = this.ticketRepository.findParentsInPeriod(
       input.startDate,
       input.endDate
     );
 
+    // 親チケットをソート（開始日 → 終了日 → ID）
+    const parents = this.sortTickets(parentsUnsorted);
+
     // 対象がない場合は空の結果を返す
     if (parents.length === 0) {
       return {
-        headers: this.generateHeaders([]),
+        headers: this.generateHeaders([], includeDescription),
         rows: [],
         backgrounds: [],
         headerBackgrounds: [],
         dateRange: [],
+        includeDescription,
       };
     }
 
@@ -106,27 +115,31 @@ export class GanttService {
       : [];
 
     // ヘッダ行を生成（固定カラム + 日付）
-    const headers = this.generateHeaders(dateRange);
+    const headers = this.generateHeaders(dateRange, includeDescription);
 
     // ヘッダ行の背景色を生成
-    const headerBackgrounds = this.createHeaderBackgrounds(dateRange, holidays);
+    const headerBackgrounds = this.createHeaderBackgrounds(dateRange, holidays, includeDescription);
 
     // 行データと背景色を生成
     const rows: GanttRowData[] = [];
     const backgrounds: string[][] = [];
 
+    // 現在日付（遅延判定用）
+    const today = DateUtils.stripTime(new Date());
+
     for (const parent of parents) {
       // 親チケット行
-      const parentRow = this.createParentRow(parent, dateRange);
-      const parentBg = this.createRowBackground(parent, dateRange, true, holidays);
+      const parentRow = this.createParentRow(parent, dateRange, includeDescription);
+      const parentBg = this.createRowBackground(parent, dateRange, true, holidays, today, includeDescription);
       rows.push(parentRow);
       backgrounds.push(parentBg);
 
-      // 子チケット行
-      const children = this.ticketRepository.findChildren(parent.id);
+      // 子チケット行（ソート済み）
+      const childrenUnsorted = this.ticketRepository.findChildren(parent.id);
+      const children = this.sortTickets(childrenUnsorted);
       for (const child of children) {
-        const childRow = this.createChildRow(parent.name, child, dateRange);
-        const childBg = this.createRowBackground(child, dateRange, false, holidays);
+        const childRow = this.createChildRow(parent.name, child, dateRange, includeDescription);
+        const childBg = this.createRowBackground(child, dateRange, false, holidays, today, includeDescription);
         rows.push(childRow);
         backgrounds.push(childBg);
       }
@@ -138,19 +151,23 @@ export class GanttService {
       backgrounds,
       headerBackgrounds,
       dateRange,
+      includeDescription,
     };
   }
 
   /**
    * GanttRowモデルの配列を生成（レガシー互換）
    */
-  generateGanttRows(startDate: Date, endDate: Date): GanttRow[] {
-    const parents = this.ticketRepository.findParentsInPeriod(startDate, endDate);
+  generateGanttRows(startDate: Date, endDate: Date, includeDescription = false): GanttRow[] {
+    const parentsUnsorted = this.ticketRepository.findParentsInPeriod(startDate, endDate);
 
     // 対象がない場合は空配列を返す
-    if (parents.length === 0) {
+    if (parentsUnsorted.length === 0) {
       return [];
     }
+
+    // 親チケットをソート（開始日 → 終了日 → ID）
+    const parents = this.sortTickets(parentsUnsorted);
 
     // ガント表示範囲を対象親チケット群のmin/maxから計算
     const dateRange = this.calculateGanttDateRange(parents);
@@ -160,16 +177,20 @@ export class GanttService {
       ? HolidayService.getHolidays(dateRange[0], dateRange[dateRange.length - 1])
       : [];
 
+    // 現在日付（遅延判定用）
+    const today = DateUtils.stripTime(new Date());
+
     const ganttRows: GanttRow[] = [];
 
     for (const parent of parents) {
       // 親チケット行
-      ganttRows.push(this.ticketToGanttRow(parent, '', dateRange, holidays));
+      ganttRows.push(this.ticketToGanttRow(parent, '', dateRange, holidays, today, includeDescription));
 
-      // 子チケット行
-      const children = this.ticketRepository.findChildren(parent.id);
+      // 子チケット行（ソート済み）
+      const childrenUnsorted = this.ticketRepository.findChildren(parent.id);
+      const children = this.sortTickets(childrenUnsorted);
       for (const child of children) {
-        ganttRows.push(this.ticketToGanttRow(child, parent.name, dateRange, holidays));
+        ganttRows.push(this.ticketToGanttRow(child, parent.name, dateRange, holidays, today, includeDescription));
       }
     }
 
@@ -179,16 +200,10 @@ export class GanttService {
   /**
    * ヘッダ行を生成
    */
-  private generateHeaders(dateRange: Date[]): string[] {
-    const fixedHeaders = [
-      '親チケット名',
-      '子チケット名',
-      'メモ',
-      '担当者',
-      '状態',
-      '開始日',
-      '終了日',
-    ];
+  private generateHeaders(dateRange: Date[], includeDescription: boolean): string[] {
+    const fixedHeaders = includeDescription
+      ? ['親チケット名', '子チケット名', '説明文', '担当者', '状態', '開始日', '終了日']
+      : ['親チケット名', '子チケット名', '担当者', '状態', '開始日', '終了日'];
 
     const dateHeaders = dateRange.map(date => DateUtils.format(date, 'M/D'));
 
@@ -196,14 +211,22 @@ export class GanttService {
   }
 
   /**
+   * 固定列数を取得
+   */
+  private getFixedColumnCount(includeDescription: boolean): number {
+    return includeDescription ? 7 : 6;
+  }
+
+  /**
    * ヘッダ行の背景色配列を作成
    */
-  private createHeaderBackgrounds(dateRange: Date[], holidays: Date[] = []): string[] {
+  private createHeaderBackgrounds(dateRange: Date[], holidays: Date[] = [], includeDescription: boolean): string[] {
     const settings = this.settingsRepository.getSettings();
     const backgrounds: string[] = [];
+    const fixedColumnCount = this.getFixedColumnCount(includeDescription);
 
-    // 固定カラム（7列）はヘッダ背景色
-    for (let i = 0; i < 7; i++) {
+    // 固定カラムはヘッダ背景色
+    for (let i = 0; i < fixedColumnCount; i++) {
       backgrounds.push(settings.headerBackgroundColor);
     }
 
@@ -233,13 +256,13 @@ export class GanttService {
   /**
    * 親チケット行を作成
    */
-  private createParentRow(parent: Ticket, dateRange: Date[]): GanttRowData {
+  private createParentRow(parent: Ticket, dateRange: Date[], includeDescription: boolean): GanttRowData {
     const dateCells = this.createDateCells(parent, dateRange);
 
     return {
       parentName: parent.name,
       childName: '',
-      memo: MemoExtractor.extract(parent.description),
+      description: includeDescription ? parent.description : '',
       assignee: parent.assignee,
       status: STATUS_LABELS[parent.status],
       startDate: DateUtils.format(parent.startDate, 'YYYY/MM/DD'),
@@ -254,14 +277,15 @@ export class GanttService {
   private createChildRow(
     parentName: string,
     child: Ticket,
-    dateRange: Date[]
+    dateRange: Date[],
+    includeDescription: boolean
   ): GanttRowData {
     const dateCells = this.createDateCells(child, dateRange);
 
     return {
       parentName,
       childName: child.name,
-      memo: MemoExtractor.extract(child.description),
+      description: includeDescription ? child.description : '',
       assignee: child.assignee,
       status: STATUS_LABELS[child.status],
       startDate: DateUtils.format(child.startDate, 'YYYY/MM/DD'),
@@ -284,15 +308,22 @@ export class GanttService {
     ticket: Ticket,
     dateRange: Date[],
     isParent: boolean,
-    holidays: Date[] = []
+    holidays: Date[] = [],
+    today: Date,
+    includeDescription: boolean
   ): string[] {
     const settings = this.settingsRepository.getSettings();
     const backgrounds: string[] = [];
+    const fixedColumnCount = this.getFixedColumnCount(includeDescription);
 
-    // 固定カラム（7列）は白背景
-    for (let i = 0; i < 7; i++) {
+    // 固定カラムは白背景
+    for (let i = 0; i < fixedColumnCount; i++) {
       backgrounds.push('#FFFFFF');
     }
+
+    // 遅延判定（終了日を過ぎて完了していない）
+    const ticketEndDate = DateUtils.stripTime(ticket.endDate);
+    const isOverdue = ticket.status !== 'completed' && ticketEndDate < today;
 
     // 日付カラム
     for (const date of dateRange) {
@@ -301,15 +332,22 @@ export class GanttService {
       const isSunday = DateUtils.isSunday(strippedDate);
       const isSaturday = DateUtils.isSaturday(strippedDate);
       const isHoliday = HolidayService.isHoliday(strippedDate, holidays);
+      const isEndDate = strippedDate.getTime() === ticketEndDate.getTime();
 
       let bgColor = '#FFFFFF';
 
       if (isInRange) {
-        // チケット期間内（最優先）
-        bgColor = this.settingsRepository.getTicketColor(
-          isParent,
-          STATUS_LABELS[ticket.status]
-        );
+        // チケット期間内
+        if (isOverdue && isEndDate) {
+          // 遅延していて終了日の場合は遅延色
+          bgColor = settings.overdueColor;
+        } else {
+          // 通常の状態色
+          bgColor = this.settingsRepository.getTicketColor(
+            isParent,
+            STATUS_LABELS[ticket.status]
+          );
+        }
       } else if (isHoliday) {
         // 祝日（チケット期間外）
         bgColor = settings.holidayColor;
@@ -369,20 +407,49 @@ export class GanttService {
     ticket: Ticket,
     parentName: string,
     dateRange: Date[],
-    holidays: Date[] = []
+    holidays: Date[] = [],
+    today: Date,
+    includeDescription: boolean
   ): GanttRow {
     const isParent = ticket.type === 'parent';
 
     return {
       parentName: isParent ? ticket.name : parentName,
       childName: isParent ? '' : ticket.name,
-      memo: MemoExtractor.extract(ticket.description),
+      description: includeDescription ? ticket.description : '',
       assignee: ticket.assignee,
       status: STATUS_LABELS[ticket.status],
       startDate: ticket.startDate,
       endDate: ticket.endDate,
       dateCells: this.createDateCells(ticket, dateRange),
-      backgroundColors: this.createRowBackground(ticket, dateRange, isParent, holidays),
+      backgroundColors: this.createRowBackground(ticket, dateRange, isParent, holidays, today, includeDescription),
     };
+  }
+
+  /**
+   * チケットをソート
+   * ソート順: 開始日昇順 → 終了日昇順 → ID昇順
+   * @param tickets ソート対象のチケット配列
+   * @returns ソート済みのチケット配列
+   */
+  private sortTickets(tickets: Ticket[]): Ticket[] {
+    return [...tickets].sort((a, b) => {
+      // 1. 開始日で比較（昇順）
+      const startDateA = DateUtils.stripTime(a.startDate).getTime();
+      const startDateB = DateUtils.stripTime(b.startDate).getTime();
+      if (startDateA !== startDateB) {
+        return startDateA - startDateB;
+      }
+
+      // 2. 開始日が同じ場合は終了日で比較（昇順）
+      const endDateA = DateUtils.stripTime(a.endDate).getTime();
+      const endDateB = DateUtils.stripTime(b.endDate).getTime();
+      if (endDateA !== endDateB) {
+        return endDateA - endDateB;
+      }
+
+      // 3. 終了日も同じ場合はIDで比較（昇順）
+      return a.id.localeCompare(b.id);
+    });
   }
 }

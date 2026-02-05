@@ -12,7 +12,7 @@ import { DateUtils } from '../../domain/utils/DateUtils';
 const STATUS_MAP: Record<string, TicketStatus> = {
   未対応: 'notStarted',
   処理中: 'inProgress',
-  処理済み: 'completed',
+  処理済み: 'processed',
   完了: 'completed',
 };
 

@@ -176,4 +176,67 @@ export class DateUtils {
     }
     return date;
   }
+
+  /**
+   * 営業日（土日祝日を除く）かどうかを判定
+   * @param date 日付
+   * @param holidays 祝日リスト
+   * @returns 営業日ならtrue
+   */
+  static isBusinessDay(date: Date, holidays: Date[]): boolean {
+    if (this.isWeekend(date)) {
+      return false;
+    }
+    // 祝日判定
+    const targetTime = this.stripTime(date).getTime();
+    return !holidays.some((holiday) => this.stripTime(holiday).getTime() === targetTime);
+  }
+
+  /**
+   * 基準日に営業日数を加算（土日祝日をスキップ）
+   * @param baseDate 基準日
+   * @param businessDays 加算する営業日数（0以上）
+   * @param holidays 祝日リスト
+   * @returns 加算後の日付
+   */
+  static addBusinessDays(baseDate: Date, businessDays: number, holidays: Date[]): Date {
+    if (businessDays < 0) {
+      throw new Error('businessDays must be non-negative');
+    }
+
+    let result = this.stripTime(baseDate);
+    let daysToAdd = businessDays;
+
+    while (daysToAdd > 0) {
+      result = this.addDays(result, 1);
+      if (this.isBusinessDay(result, holidays)) {
+        daysToAdd--;
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * 開始日から指定した営業日数分の期間の終了日を計算
+   * 開始日を1日目としてカウント（例: 開始日から3営業日 = 開始日 + 2営業日後）
+   * @param startDate 開始日
+   * @param durationBusinessDays 期間（営業日数）
+   * @param holidays 祝日リスト
+   * @returns 終了日
+   */
+  static getEndDateByBusinessDays(startDate: Date, durationBusinessDays: number, holidays: Date[]): Date {
+    if (durationBusinessDays < 1) {
+      throw new Error('durationBusinessDays must be at least 1');
+    }
+
+    // 開始日が営業日でない場合は次の営業日を探す
+    let current = this.stripTime(startDate);
+    while (!this.isBusinessDay(current, holidays)) {
+      current = this.addDays(current, 1);
+    }
+
+    // 開始日を1日目としてカウントするので、残りはduration-1営業日
+    return this.addBusinessDays(current, durationBusinessDays - 1, holidays);
+  }
 }

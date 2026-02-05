@@ -6,8 +6,8 @@ export interface GanttRow {
   parentName: string;
   /** 子チケット名（親の場合は空文字） */
   childName: string;
-  /** メモ（説明文から抽出） */
-  memo: string;
+  /** 説明文 */
+  description: string;
   /** 担当者 */
   assignee: string;
   /** 状態（日本語） */

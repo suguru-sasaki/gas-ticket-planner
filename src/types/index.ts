@@ -5,7 +5,7 @@
 /**
  * チケット状態
  */
-export type TicketStatus = 'notStarted' | 'inProgress' | 'completed';
+export type TicketStatus = 'notStarted' | 'inProgress' | 'processed' | 'completed';
 
 /**
  * チケット種別
@@ -16,8 +16,9 @@ export type TicketType = 'parent' | 'child';
  * 状態ラベルのマッピング
  */
 export const STATUS_LABELS: Record<TicketStatus, string> = {
-  notStarted: '未着手',
-  inProgress: '進行中',
+  notStarted: '未対応',
+  inProgress: '処理中',
+  processed: '処理済み',
   completed: '完了',
 };
 
@@ -25,8 +26,9 @@ export const STATUS_LABELS: Record<TicketStatus, string> = {
  * 状態の逆引きマッピング
  */
 export const STATUS_FROM_LABEL: Record<string, TicketStatus> = {
-  未着手: 'notStarted',
-  進行中: 'inProgress',
+  未対応: 'notStarted',
+  処理中: 'inProgress',
+  処理済み: 'processed',
   完了: 'completed',
 };
 

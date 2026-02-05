@@ -184,12 +184,13 @@ interface Ticket {
   createdAt: Date;           // 作成日時
 }
 
-type TicketStatus = 'notStarted' | 'inProgress' | 'completed';
+type TicketStatus = 'notStarted' | 'inProgress' | 'processed' | 'completed';
 
-// 日本語表示用マッピング
+// 日本語表示用マッピング（Backlogの標準状態に準拠）
 const STATUS_LABELS: Record<TicketStatus, string> = {
-  notStarted: '未着手',
-  inProgress: '進行中',
+  notStarted: '未対応',
+  inProgress: '処理中',
+  processed: '処理済み',
   completed: '完了',
 };
 ```
@@ -220,7 +221,7 @@ interface Assignee {
 interface GanttRow {
   parentName: string;        // 親チケット名
   childName: string;         // 子チケット名（親の場合は空）
-  memo: string;              // メモ（説明文から抽出）
+  description: string;       // 説明文
   assignee: string;          // 担当者
   status: string;            // 状態（日本語）
   startDate: Date;           // 開始日
@@ -257,9 +258,11 @@ interface GanttHeader {
 ```typescript
 interface GanttSettings {
   parentColor: string;           // 親チケット色
-  childColorNotStarted: string;  // 子チケット色（未着手）
-  childColorInProgress: string;  // 子チケット色（進行中）
+  childColorNotStarted: string;  // 子チケット色（未対応）
+  childColorInProgress: string;  // 子チケット色（処理中）
+  childColorProcessed: string;   // 子チケット色（処理済み）
   childColorCompleted: string;   // 子チケット色（完了）
+  overdueColor: string;          // 遅延色（終了日が過去で未完了の場合）
   saturdayColor: string;         // 土曜日色（青系）
   sundayColor: string;           // 日曜日色（赤系）
   holidayColor: string;          // 祝日色（赤系）
@@ -267,10 +270,12 @@ interface GanttSettings {
 }
 
 const DEFAULT_SETTINGS: GanttSettings = {
-  parentColor: '#4285F4',
-  childColorNotStarted: '#E0E0E0',
-  childColorInProgress: '#FFC107',
-  childColorCompleted: '#4CAF50',
+  parentColor: '#ddefe5',
+  childColorNotStarted: '#ee7f77',
+  childColorInProgress: '#4389c5',
+  childColorProcessed: '#5db5a5',
+  childColorCompleted: '#a1af2f',
+  overdueColor: '#ee7f77',       // 遅延色（終了日が過去で未完了のチケットの終了日セル）
   saturdayColor: '#BBDEFB',      // 青系（Material Design Blue 100）
   sundayColor: '#FFCDD2',        // 赤系（Material Design Red 100）
   holidayColor: '#FFCDD2',       // 赤系（日曜日と同じ）
@@ -382,10 +387,40 @@ class DateUtils {
     range2Start: Date,
     range2End: Date
   ): boolean;
+
+  /**
+   * 営業日（土日祝日を除く）かどうかを判定
+   * @param date 日付
+   * @param holidays 祝日リスト
+   * @returns 営業日ならtrue
+   */
+  static isBusinessDay(date: Date, holidays: Date[]): boolean;
+
+  /**
+   * 基準日に営業日数を加算（土日祝日をスキップ）
+   * @param baseDate 基準日
+   * @param businessDays 加算する営業日数（0以上）
+   * @param holidays 祝日リスト
+   * @returns 加算後の日付
+   */
+  static addBusinessDays(baseDate: Date, businessDays: number, holidays: Date[]): Date;
+
+  /**
+   * 開始日から指定した営業日数分の期間の終了日を計算
+   * 開始日を1日目としてカウント（例: 開始日から3営業日 = 開始日 + 2営業日後）
+   * @param startDate 開始日
+   * @param durationBusinessDays 期間（営業日数）
+   * @param holidays 祝日リスト
+   * @returns 終了日
+   */
+  static getEndDateByBusinessDays(startDate: Date, durationBusinessDays: number, holidays: Date[]): Date;
 }
 ```
 
 ### 4.2 MemoExtractor
+
+> **注**: ガントチャートでは説明文をそのまま表示するため、現在MemoExtractorは使用されていません。
+> 将来的な拡張や他機能での利用のためにユーティリティとして残されています。
 
 ```typescript
 class MemoExtractor {
@@ -495,12 +530,34 @@ class GanttService {
   /**
    * ガント生成用のデータを作成
    * 1. フィルタ期間に重なる親チケットを抽出
-   * 2. 対象親チケット群のmin(開始日)〜max(終了日)をガント表示範囲とする
+   * 2. 親チケットをソート（開始日→終了日→ID）
+   * 3. 対象親チケット群のmin(開始日)〜max(終了日)をガント表示範囲とする
+   * 4. 各親チケットの子チケットをソート（開始日→終了日→ID）
+   *
+   * ソート順序:
+   * - 第1キー: 開始日の昇順（早い日付が上）
+   * - 第2キー: 終了日の昇順（開始日が同じ場合、早い終了日が上）
+   * - 第3キー: IDの昇順（開始日・終了日が同じ場合、小さいIDが上）
+   *
+   * オプション:
+   * - includeDescription: 説明文列を含めるかどうか（デフォルト: false）
+   *
+   * 遅延判定:
+   * - 終了日が今日より前かつ状態が「完了」以外の場合、終了日セルに遅延色を適用
+   *
    * @param startDate フィルタ開始日
    * @param endDate フィルタ終了日
+   * @param includeDescription 説明文を含めるか
    * @returns ガントデータ
    */
-  generateGanttData(startDate: Date, endDate: Date): GanttData;
+  generateGanttData(startDate: Date, endDate: Date, includeDescription?: boolean): GanttData;
+
+  /**
+   * チケットをソート
+   * @param tickets ソート対象のチケット配列
+   * @returns ソート済みのチケット配列（新しい配列）
+   */
+  private sortTickets(tickets: Ticket[]): Ticket[];
 
   /**
    * ガントシートを作成
@@ -679,6 +736,8 @@ interface CreateTicketFormData {
   assignee: string;
   startDate: string;  // ISO形式
   endDate: string;    // ISO形式
+  skipHolidays?: boolean;  // 土日祝日を避けて計算するか（デフォルト: true）
+  childPrefix?: string;    // 子チケット名の接頭辞（デフォルト: 空文字）
 }
 
 interface CreateTicketResult {
@@ -799,9 +858,11 @@ class SettingsRepository {
   private keyToProperty(key: string): keyof GanttSettings | null {
     const map: Record<string, keyof GanttSettings> = {
       '親チケット色': 'parentColor',
-      '子チケット色_未着手': 'childColorNotStarted',
-      '子チケット色_進行中': 'childColorInProgress',
+      '子チケット色_未対応': 'childColorNotStarted',
+      '子チケット色_処理中': 'childColorInProgress',
+      '子チケット色_処理済み': 'childColorProcessed',
       '子チケット色_完了': 'childColorCompleted',
+      '遅延色': 'overdueColor',
       '土曜日色': 'saturdayColor',
       '日曜日色': 'sundayColor',
       '祝日色': 'holidayColor',

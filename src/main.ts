@@ -14,6 +14,7 @@ import { TemplateRepository } from './infra/repositories/TemplateRepository';
 import { SettingsRepository } from './infra/repositories/SettingsRepository';
 import { GanttService, IGanttTicketRepository } from './domain/services/GanttService';
 import { DateUtils } from './domain/utils/DateUtils';
+import { HolidayService } from './domain/utils/HolidayService';
 import { AppError } from './errors/AppError';
 import {
   BacklogRepository,
@@ -238,6 +239,8 @@ function createTicket(formData: {
   assignee: string;
   startDate: string;
   endDate: string;
+  skipHolidays?: boolean;
+  childPrefix?: string;
 }): { success: boolean; ticketCount?: number; issueKey?: string; error?: string } {
   try {
     // Backlog設定を確認
@@ -255,7 +258,9 @@ function createTicket(formData: {
       return { success: false, error: '開始日は終了日以前である必要があります' };
     }
 
-    return createTicketToBacklog(formData, startDate, endDate, backlogConfig);
+    const skipHolidays = formData.skipHolidays ?? true; // デフォルトtrue
+    const childPrefix = formData.childPrefix ?? ''; // デフォルト空文字
+    return createTicketToBacklog(formData, startDate, endDate, backlogConfig, skipHolidays, childPrefix);
   } catch (error) {
     const message =
       error instanceof AppError
@@ -278,7 +283,9 @@ function createTicketToBacklog(
   },
   startDate: Date,
   endDate: Date,
-  config: BacklogConfig
+  config: BacklogConfig,
+  skipHolidays: boolean,
+  childPrefix: string
 ): { success: boolean; ticketCount?: number; issueKey?: string; error?: string } {
   const backlogRepo = new BacklogRepository(config);
   const templateRepo = getTemplateRepository();
@@ -286,12 +293,32 @@ function createTicketToBacklog(
   // テンプレートを取得
   const templates = templateRepo.findAll();
 
+  // 祝日リストを取得（skipHolidaysがtrueの場合のみ）
+  // テンプレートの最大オフセット+期間を考慮した範囲で取得
+  let holidays: Date[] = [];
+  if (skipHolidays && templates.length > 0) {
+    const maxOffset = Math.max(...templates.map((t) => t.startOffset + t.duration));
+    const holidayEndDate = DateUtils.addDays(startDate, maxOffset + 30); // 余裕を持って取得
+    holidays = HolidayService.getHolidays(startDate, holidayEndDate);
+  }
+
   // 子チケット情報を展開
   const children = templates.map((template) => {
-    const childStart = DateUtils.addDays(startDate, template.startOffset);
-    const childEnd = DateUtils.addDays(childStart, template.duration - 1);
+    let childStart: Date;
+    let childEnd: Date;
+
+    if (skipHolidays) {
+      // 土日祝日をスキップして計算
+      childStart = DateUtils.addBusinessDays(startDate, template.startOffset, holidays);
+      childEnd = DateUtils.getEndDateByBusinessDays(childStart, template.duration, holidays);
+    } else {
+      // カレンダー日で計算（従来の動作）
+      childStart = DateUtils.addDays(startDate, template.startOffset);
+      childEnd = DateUtils.addDays(childStart, template.duration - 1);
+    }
+
     return {
-      name: template.name,
+      name: childPrefix + template.name,
       description: template.description,
       startDate: childStart,
       endDate: childEnd,
@@ -326,6 +353,7 @@ function createTicketToBacklog(
 function generateGantt(params: {
   startDate: string;
   endDate: string;
+  includeDescription?: boolean;
 }): { success: boolean; sheetName?: string; error?: string } {
   try {
     // Backlog設定を確認
@@ -346,7 +374,8 @@ function generateGantt(params: {
     }
 
     // Backlogからデータ取得
-    const ganttData = generateGanttFromBacklog(startDate, endDate, backlogConfig);
+    const includeDescription = params.includeDescription ?? false;
+    const ganttData = generateGanttFromBacklog(startDate, endDate, backlogConfig, includeDescription);
 
     if (ganttData.rows.length === 0) {
       return { success: false, error: '対象となるチケットがありません' };
@@ -383,40 +412,75 @@ function generateGantt(params: {
 
     // データ行を書き込み
     if (ganttData.rows.length > 0) {
-      const rowData = ganttData.rows.map(row => [
-        row.parentName,
-        row.childName,
-        row.memo,
-        row.assignee,
-        row.status,
-        row.startDate,
-        row.endDate,
-        ...row.dateCells,
-      ]);
+      const rowData = ganttData.includeDescription
+        ? ganttData.rows.map(row => [
+            row.parentName,
+            row.childName,
+            row.description,
+            row.assignee,
+            row.status,
+            row.startDate,
+            row.endDate,
+            ...row.dateCells,
+          ])
+        : ganttData.rows.map(row => [
+            row.parentName,
+            row.childName,
+            row.assignee,
+            row.status,
+            row.startDate,
+            row.endDate,
+            ...row.dateCells,
+          ]);
       sheet.getRange(2, 1, rowData.length, rowData[0].length).setValues(rowData);
 
       // 背景色を設定
       sheet
         .getRange(2, 1, ganttData.backgrounds.length, ganttData.backgrounds[0].length)
         .setBackgrounds(ganttData.backgrounds);
+
+      // 状態列の位置（説明文含む場合は5列目、含まない場合は4列目）
+      const statusColumn = ganttData.includeDescription ? 5 : 4;
+      sheet.getRange(2, statusColumn, ganttData.rows.length, 1).setHorizontalAlignment('center');
+
+      // 状態列の背景色を状態に応じて設定
+      const statusColors = ganttData.rows.map((row) => {
+        return [settingsRepo.getTicketColor(row.childName === '', row.status)];
+      });
+      sheet.getRange(2, statusColumn, statusColors.length, 1).setBackgrounds(statusColors);
     }
 
     // 固定行・固定列を設定
     sheet.setFrozenRows(1);
-    sheet.setFrozenColumns(2);
+    // 固定列：説明文含む場合は5列目（状態）まで、含まない場合は4列目（状態）まで
+    sheet.setFrozenColumns(ganttData.includeDescription ? 5 : 4);
 
     // 列幅調整
-    sheet.setColumnWidth(1, 150); // 親チケット名
-    sheet.setColumnWidth(2, 120); // 子チケット名
-    sheet.setColumnWidth(3, 150); // メモ
-    sheet.setColumnWidth(4, 80); // 担当者
-    sheet.setColumnWidth(5, 60); // 状態
-    sheet.setColumnWidth(6, 90); // 開始日
-    sheet.setColumnWidth(7, 90); // 終了日
+    if (ganttData.includeDescription) {
+      sheet.setColumnWidth(1, 150); // 親チケット名
+      sheet.setColumnWidth(2, 120); // 子チケット名
+      sheet.setColumnWidth(3, 300); // 説明文
+      sheet.setColumnWidth(4, 80);  // 担当者
+      sheet.setColumnWidth(5, 60);  // 状態
+      sheet.setColumnWidth(6, 90);  // 開始日
+      sheet.setColumnWidth(7, 90);  // 終了日
 
-    // 日付列の幅
-    for (let i = 8; i <= ganttData.headers.length; i++) {
-      sheet.setColumnWidth(i, 40);
+      // 日付列の幅
+      for (let i = 8; i <= ganttData.headers.length; i++) {
+        sheet.setColumnWidth(i, 40);
+      }
+    } else {
+      sheet.setColumnWidth(1, 150); // 親チケット名
+      sheet.setColumnWidth(2, 120); // 子チケット名
+      sheet.setColumnWidth(3, 80);  // 担当者
+      sheet.setColumnWidth(4, 60);  // 状態
+      sheet.setColumnWidth(5, 90);  // 開始日
+      sheet.setColumnWidth(6, 90);  // 終了日
+
+      // 日付列の幅
+      for (let i = 7; i <= ganttData.headers.length; i++) {
+        sheet.setColumnWidth(i, 40);
+      }
     }
 
     // シートをアクティブ化
@@ -446,7 +510,8 @@ function generateGantt(params: {
 function generateGanttFromBacklog(
   startDate: Date,
   endDate: Date,
-  config: BacklogConfig
+  config: BacklogConfig,
+  includeDescription: boolean
 ): ReturnType<GanttService['generateGantt']> {
   const backlogRepo = new BacklogRepository(config);
   const settingsRepo = getSettingsRepository();
@@ -478,7 +543,7 @@ function generateGanttFromBacklog(
     settingsRepo
   );
 
-  return ganttService.generateGantt({ startDate, endDate });
+  return ganttService.generateGantt({ startDate, endDate, includeDescription });
 }
 
 // ============================================================

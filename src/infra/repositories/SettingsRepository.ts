@@ -103,10 +103,12 @@ export class SettingsRepository {
     }
 
     switch (status) {
-      case '未着手':
+      case '未対応':
         return settings.childColorNotStarted;
-      case '進行中':
+      case '処理中':
         return settings.childColorInProgress;
+      case '処理済み':
+        return settings.childColorProcessed;
       case '完了':
         return settings.childColorCompleted;
       default:

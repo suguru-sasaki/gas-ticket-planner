@@ -18,9 +18,11 @@ describe('SettingsRepository', () => {
     it('設定を取得できる', () => {
       createSettingsSheet([
         ['親チケット色', '#FF0000'],
-        ['子チケット色_未着手', '#00FF00'],
-        ['子チケット色_進行中', '#0000FF'],
+        ['子チケット色_未対応', '#00FF00'],
+        ['子チケット色_処理中', '#0000FF'],
+        ['子チケット色_処理済み', '#00FFFF'],
         ['子チケット色_完了', '#FFFF00'],
+        ['遅延色', '#FF00FF'],
       ]);
       repository = new SettingsRepository(mockSpreadsheet);
 
@@ -29,7 +31,9 @@ describe('SettingsRepository', () => {
       expect(result.parentColor).toBe('#FF0000');
       expect(result.childColorNotStarted).toBe('#00FF00');
       expect(result.childColorInProgress).toBe('#0000FF');
+      expect(result.childColorProcessed).toBe('#00FFFF');
       expect(result.childColorCompleted).toBe('#FFFF00');
+      expect(result.overdueColor).toBe('#FF00FF');
     });
 
     it('ヘッダのみの場合はデフォルト設定を返す', () => {
@@ -39,10 +43,11 @@ describe('SettingsRepository', () => {
       const result = repository.getSettings();
 
       // DEFAULT_SETTINGSの値を確認
-      expect(result.parentColor).toBe('#4285F4');
-      expect(result.childColorNotStarted).toBe('#E0E0E0');
-      expect(result.childColorInProgress).toBe('#FFC107');
-      expect(result.childColorCompleted).toBe('#4CAF50');
+      expect(result.parentColor).toBe('#ddefe5');
+      expect(result.childColorNotStarted).toBe('#ee7f77');
+      expect(result.childColorInProgress).toBe('#4389c5');
+      expect(result.childColorProcessed).toBe('#5db5a5');
+      expect(result.childColorCompleted).toBe('#a1af2f');
     });
 
     it('一部の設定のみの場合は残りはデフォルト値を使う', () => {
@@ -52,7 +57,7 @@ describe('SettingsRepository', () => {
       const result = repository.getSettings();
 
       expect(result.parentColor).toBe('#FF0000');
-      expect(result.childColorNotStarted).toBe('#E0E0E0'); // デフォルト
+      expect(result.childColorNotStarted).toBe('#ee7f77'); // デフォルト
     });
   });
 
@@ -64,7 +69,7 @@ describe('SettingsRepository', () => {
       repository.resetToDefault();
 
       const result = repository.getSettings();
-      expect(result.parentColor).toBe('#4285F4');
+      expect(result.parentColor).toBe('#ddefe5');
     });
   });
 
@@ -93,42 +98,49 @@ describe('SettingsRepository', () => {
   describe('getTicketColor', () => {
     beforeEach(() => {
       createSettingsSheet([
-        ['親チケット色', '#4285F4'],
-        ['子チケット色_未着手', '#E0E0E0'],
-        ['子チケット色_進行中', '#FFC107'],
-        ['子チケット色_完了', '#4CAF50'],
+        ['親チケット色', '#ddefe5'],
+        ['子チケット色_未対応', '#ee7f77'],
+        ['子チケット色_処理中', '#4389c5'],
+        ['子チケット色_処理済み', '#5db5a5'],
+        ['子チケット色_完了', '#a1af2f'],
       ]);
       repository = new SettingsRepository(mockSpreadsheet);
     });
 
     it('親チケットの色を取得できる', () => {
-      const result = repository.getTicketColor(true, '未着手');
+      const result = repository.getTicketColor(true, '未対応');
 
-      expect(result).toBe('#4285F4');
+      expect(result).toBe('#ddefe5');
     });
 
-    it('子チケット（未着手）の色を取得できる', () => {
-      const result = repository.getTicketColor(false, '未着手');
+    it('子チケット（未対応）の色を取得できる', () => {
+      const result = repository.getTicketColor(false, '未対応');
 
-      expect(result).toBe('#E0E0E0');
+      expect(result).toBe('#ee7f77');
     });
 
-    it('子チケット（進行中）の色を取得できる', () => {
-      const result = repository.getTicketColor(false, '進行中');
+    it('子チケット（処理中）の色を取得できる', () => {
+      const result = repository.getTicketColor(false, '処理中');
 
-      expect(result).toBe('#FFC107');
+      expect(result).toBe('#4389c5');
+    });
+
+    it('子チケット（処理済み）の色を取得できる', () => {
+      const result = repository.getTicketColor(false, '処理済み');
+
+      expect(result).toBe('#5db5a5');
     });
 
     it('子チケット（完了）の色を取得できる', () => {
       const result = repository.getTicketColor(false, '完了');
 
-      expect(result).toBe('#4CAF50');
+      expect(result).toBe('#a1af2f');
     });
 
-    it('不明な状態は未着手の色を返す', () => {
+    it('不明な状態は未対応の色を返す', () => {
       const result = repository.getTicketColor(false, '不明');
 
-      expect(result).toBe('#E0E0E0');
+      expect(result).toBe('#ee7f77');
     });
   });
 });
