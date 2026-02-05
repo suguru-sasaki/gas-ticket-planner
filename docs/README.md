@@ -89,9 +89,8 @@ gas-ticket-planner/
 │       └── GanttGeneration.test.ts
 ├── dist/                         # ビルド成果物（clasp push対象）
 ├── esbuild.config.mjs            # esbuildビルド設定
-├── .clasp.json                   # 現在の環境設定（.clasp.dev/prodからコピー）
-├── .clasp.dev.json               # 開発環境設定
-├── .clasp.prod.json              # 本番環境設定
+├── .clasp.json                   # 現在の環境設定（gitignore対象）
+├── .clasp.example.json           # clasp設定のテンプレート
 ├── appsscript.json               # GASマニフェスト
 ├── package.json
 ├── tsconfig.json
@@ -135,13 +134,22 @@ npx clasp login
 
 ### 4. GASプロジェクト作成
 
-#### 開発環境
+#### clasp設定ファイルの作成
 
 ```bash
-# Googleスプレッドシートを作成し、スクリプトIDを取得
-# スプレッドシート > 拡張機能 > Apps Script > プロジェクトの設定 > スクリプトID
+# テンプレートから設定ファイルを作成
+cp .clasp.example.json .clasp.dev.json
+cp .clasp.example.json .clasp.prod.json
+```
 
-# .clasp.dev.json を編集
+#### 開発環境
+
+1. Googleスプレッドシートを新規作成
+2. 「拡張機能」→「Apps Script」を開く
+3. 「プロジェクトの設定」→「スクリプトID」をコピー
+4. `.clasp.dev.json` を編集してスクリプトIDを設定
+
+```json
 {
   "scriptId": "YOUR_DEV_SCRIPT_ID",
   "rootDir": "./dist"
@@ -150,15 +158,16 @@ npx clasp login
 
 #### 本番環境
 
-```bash
-# 同様に本番用スプレッドシートを作成
+同様に本番用スプレッドシートを作成し、`.clasp.prod.json` を編集
 
-# .clasp.prod.json を編集
+```json
 {
   "scriptId": "YOUR_PROD_SCRIPT_ID",
   "rootDir": "./dist"
 }
 ```
+
+> **注意**: `.clasp.dev.json` と `.clasp.prod.json` は `.gitignore` に含まれており、リポジトリにはコミットされません。
 
 ### 5. 初期デプロイ
 
