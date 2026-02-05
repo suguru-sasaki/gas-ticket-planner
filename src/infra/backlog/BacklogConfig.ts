@@ -35,15 +35,19 @@ export function validateBacklogConfig(config: Partial<BacklogConfig>): config is
 }
 
 /**
- * Backlog設定をスクリプトプロパティから取得
+ * Backlog設定をプロパティから取得
+ * - APIキーはユーザープロパティ（ユーザー固有）
+ * - その他はスクリプトプロパティ（共有設定）
  */
 export function getBacklogConfigFromProperties(): BacklogConfig | null {
-  const props = PropertiesService.getScriptProperties();
-  const host = props.getProperty('BACKLOG_HOST');
-  const apiKey = props.getProperty('BACKLOG_API_KEY');
-  const projectId = props.getProperty('BACKLOG_PROJECT_ID');
-  const issueTypeId = props.getProperty('BACKLOG_ISSUE_TYPE_ID');
-  const priorityId = props.getProperty('BACKLOG_PRIORITY_ID');
+  const scriptProps = PropertiesService.getScriptProperties();
+  const userProps = PropertiesService.getUserProperties();
+
+  const host = scriptProps.getProperty('BACKLOG_HOST');
+  const apiKey = userProps.getProperty('BACKLOG_API_KEY');
+  const projectId = scriptProps.getProperty('BACKLOG_PROJECT_ID');
+  const issueTypeId = scriptProps.getProperty('BACKLOG_ISSUE_TYPE_ID');
+  const priorityId = scriptProps.getProperty('BACKLOG_PRIORITY_ID');
 
   if (!host || !apiKey || !projectId || !issueTypeId) {
     return null;
@@ -59,25 +63,33 @@ export function getBacklogConfigFromProperties(): BacklogConfig | null {
 }
 
 /**
- * Backlog設定をスクリプトプロパティに保存
+ * Backlog設定をプロパティに保存
+ * - APIキーはユーザープロパティ（ユーザー固有）
+ * - その他はスクリプトプロパティ（共有設定）
  */
 export function saveBacklogConfigToProperties(config: BacklogConfig): void {
-  const props = PropertiesService.getScriptProperties();
-  props.setProperty('BACKLOG_HOST', config.host);
-  props.setProperty('BACKLOG_API_KEY', config.apiKey);
-  props.setProperty('BACKLOG_PROJECT_ID', config.projectId.toString());
-  props.setProperty('BACKLOG_ISSUE_TYPE_ID', config.issueTypeId.toString());
-  props.setProperty('BACKLOG_PRIORITY_ID', config.priorityId.toString());
+  const scriptProps = PropertiesService.getScriptProperties();
+  const userProps = PropertiesService.getUserProperties();
+
+  scriptProps.setProperty('BACKLOG_HOST', config.host);
+  userProps.setProperty('BACKLOG_API_KEY', config.apiKey);
+  scriptProps.setProperty('BACKLOG_PROJECT_ID', config.projectId.toString());
+  scriptProps.setProperty('BACKLOG_ISSUE_TYPE_ID', config.issueTypeId.toString());
+  scriptProps.setProperty('BACKLOG_PRIORITY_ID', config.priorityId.toString());
 }
 
 /**
  * Backlog設定をクリア
+ * - APIキーはユーザープロパティから削除
+ * - その他はスクリプトプロパティから削除
  */
 export function clearBacklogConfig(): void {
-  const props = PropertiesService.getScriptProperties();
-  props.deleteProperty('BACKLOG_HOST');
-  props.deleteProperty('BACKLOG_API_KEY');
-  props.deleteProperty('BACKLOG_PROJECT_ID');
-  props.deleteProperty('BACKLOG_ISSUE_TYPE_ID');
-  props.deleteProperty('BACKLOG_PRIORITY_ID');
+  const scriptProps = PropertiesService.getScriptProperties();
+  const userProps = PropertiesService.getUserProperties();
+
+  scriptProps.deleteProperty('BACKLOG_HOST');
+  userProps.deleteProperty('BACKLOG_API_KEY');
+  scriptProps.deleteProperty('BACKLOG_PROJECT_ID');
+  scriptProps.deleteProperty('BACKLOG_ISSUE_TYPE_ID');
+  scriptProps.deleteProperty('BACKLOG_PRIORITY_ID');
 }
